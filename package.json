@@ -1,0 +1,21 @@
+{
+  "name": "ai-llm-agent",
+  "version": "1.0.0",
+  "description": "An enterprise-grade Playwright API test automation framework powered by a tri-agent architecture (Planner, Generator, and Healer) located inside the `.gemini/` configuration directory.",
+  "main": "index.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@faker-js/faker": "^10.6.0",
+    "dotenv": "^17.4.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
+  }
+}
