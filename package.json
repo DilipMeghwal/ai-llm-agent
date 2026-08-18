@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "description": "An enterprise-grade Playwright API test automation framework powered by a tri-agent architecture (Planner, Generator, and Healer) located inside the `.gemini/` configuration directory.",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "test": "playwright test",
+    "test:parallel": "playwright test --workers=4",
+    "test:shard:1": "playwright test --shard=1/2",
+    "test:shard:2": "playwright test --shard=2/2",
+    "test:report": "playwright show-report"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
