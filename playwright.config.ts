@@ -18,7 +18,7 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI or set dynamic workers. */
-  workers: process.env.WORKERS ? parseInt(process.env.WORKERS) : (process.env.CI ? 2 : undefined),
+  workers: process.env.WORKERS ? parseInt(process.env.WORKERS) : 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['json', { outputFile: 'test-results/report.json' }],

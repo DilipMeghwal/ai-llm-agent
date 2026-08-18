@@ -1,8 +1,8 @@
 # Playwright API Automation Framework (AI Agent Assisted)
 
-An enterprise-grade Playwright API test automation framework powered by a tri-agent architecture (Planner, Generator, and Healer) located inside the `.gemini/` configuration directory.
+An enterprise-grade Playwright API test automation framework powered by a four-phase agent pipeline (Planner → **Review Gate** → Generator → Healer) located inside the `.gemini/` configuration directory.
 
-This repository allows you to parse OpenAPI/Postman specs, generate strongly-typed test suites with Zod runtime contract validation, append single endpoints without regression, sync evolving API contracts, and autonomously diagnose and heal test failures.
+This repository allows you to parse OpenAPI/Postman specs, get a **plain-text test-case plan for review before any code is written**, generate strongly-typed **smoke, sanity, integration, regression, and end-to-end (E2E)** test suites with Zod runtime contract validation, append single endpoints without regression, sync evolving API contracts, and autonomously diagnose and heal test failures within a bounded retry budget.
 
 ## 1. Directory Structure
 
@@ -10,10 +10,10 @@ This repository allows you to parse OpenAPI/Postman specs, generate strongly-typ
 ├── .gemini/                               # AI Agent Configuration & Skills
 │   ├── system.md                          # Global agent rules, SDET standards, architecture
 │   ├── skills/
-│   │   ├── skill-planner-agent.md         # Phase 1: Spec analysis & dependency DAG
-│   │   ├── skill-generator-agent.md       # Phase 2: Codegen for models, clients, & specs
-│   │   ├── skill-healer-agent.md          # Phase 3: Autonomous error diagnosis & patching
-│   │   └── skill-contract-diff.md         # Phase 4: OpenAPI contract drift detection
+│   │   ├── skill-planner-agent.md         # Phase 1: Spec analysis & test-case plan (by type)
+│   │   ├── skill-generator-agent.md       # Phase 3: Codegen for models, clients, & tagged tests
+│   │   ├── skill-healer-agent.md          # Phase 4: Bounded autonomous error diagnosis & patching
+│   │   └── skill-contract-diff.md         # OpenAPI contract drift detection & sync
 │   └── commands/
 │       └── generate.md                    # Unified orchestrator command (/generate)
 ├── src/
@@ -31,7 +31,7 @@ This repository allows you to parse OpenAPI/Postman specs, generate strongly-typ
 │   ├── factories/
 │   │   └── [domain].factory.ts            # Dynamic test data generators (@faker-js/faker)
 │   └── tests/
-│       └── [domain].spec.ts               # Test suites (happy paths, 4xx, security, edge cases)
+│       └── [domain].spec.ts               # Tagged tests: @smoke @sanity @integration @regression @e2e
 ├── .env.local / .env.qa / .env.staging
 ├── playwright.config.ts
 ├── package.json
@@ -120,43 +120,80 @@ If the `.gemini/` files are not yet created, run the bootstrap command in your p
 mkdir -p .gemini/skills .gemini/commands
 ```
 
-## 3. The Tri-Agent Architecture
+## 3. The Agent Pipeline
 
 ```
        ┌──────────────┐
-       │   PLANNER    │ (Analyzes spec, resolves CRUD dependencies, creates execution DAG)
+       │   PLANNER    │ (Analyzes spec, resolves dependencies, drafts test-case PLAN)
        └──────┬───────┘
-              │ Plan & Matrix
+              │ Test Plan (text, by test type)
               ▼
        ┌──────────────┐
-       │  GENERATOR   │ (Writes Zod schemas, typed clients, fixtures, factories, & tests)
+       │ USER REVIEW  │ (You approve, edit, or reject the plan — MANDATORY GATE)
+       └──────┬───────┘
+              │ Approved Plan
+              ▼
+       ┌──────────────┐
+       │  GENERATOR   │ (Writes Zod schemas, typed clients, fixtures, factories, & tagged tests)
        └──────┬───────┘
               │ Test Code
               ▼
        ┌──────────────┐
-       │    HEALER    │ (Executes tests, parses traces/failures, auto-fixes contracts & tests)
+       │    HEALER    │ (Executes tests, parses traces/failures, auto-fixes within a 3-attempt budget)
        └──────────────┘
 ```
 
-**Planner Agent** (`skill-planner-agent.md`, skill name `playwright-planner`): Analyzes the OpenAPI/Postman specification, resolves execution order, maps CRUD dependencies, and produces a complete test matrix (2xx, 4xx validation, 401/403 security, 404 resource state). Can optionally use `npx playwright codegen <url>` to record a real auth/login flow when the spec is fronted by a live UI, to confirm actual request/response shapes before modeling schemas.
+### Mandatory Review Gate
 
-**Generator Agent** (`skill-generator-agent.md`, skill name `playwright-generator`): Implements code following clean SDET patterns:
+The Planner never hands off directly to code generation. It first drafts a plain-text test-case plan and **stops**. Nothing is written to disk until you explicitly approve it (e.g. "approved", "proceed", "generate it"). If you ask for changes, the Planner revises and re-presents the plan rather than assuming approval.
+
+### Test Type Taxonomy
+
+Every generated test is tagged with exactly one type using Playwright's native tag syntax, so suites can be run independently:
+
+| Type | Tag | Scope | Typical Run Frequency |
+|---|---|---|---|
+| **Smoke** | `@smoke` | One happy-path call per core endpoint — service is up, auth works | Every deploy, fast (<2 min) |
+| **Sanity** | `@sanity` | Narrow check that a specific recent change works | After a targeted fix/change |
+| **Integration** | `@integration` | Multi-endpoint flows verifying dependent calls work together (e.g. create → read → update → delete) | Per PR / pre-merge |
+| **Regression** | `@regression` | Full per-endpoint matrix — happy path, negative/validation (400/422), security (401/403), not-found (404/409) | Nightly / pre-release |
+| **E2E** | `@e2e` | A realistic multi-domain user journey (e.g. register → login → create order → pay → confirm) | Pre-release / staging only |
+
+Run a subset with: `npx playwright test --grep @smoke`
+
+**Planner Agent** (`skill-planner-agent.md`, skill name `playwright-planner`): Analyzes the OpenAPI/Postman specification, resolves execution order and shared-state dependencies, and drafts the test-case plan organized by type above — presented as a text table for review, never as code. Can optionally use `npx playwright codegen <url>` to record a real auth/login flow when the spec is fronted by a live UI, to confirm actual request/response shapes before drafting the plan.
+
+**Generator Agent** (`skill-generator-agent.md`, skill name `playwright-generator`): Once the plan is approved, implements code following clean SDET patterns:
 - Registers immutable routes in `src/config/endpoints.ts`.
 - Generates runtime Zod schemas and inferred TypeScript interfaces in `src/models/`.
 - Generates typed domain clients in `src/clients/`.
 - Connects clients and isolated contexts via `src/fixtures/api.fixture.ts`.
 - Generates dynamic data builders via `@faker-js/faker` in `src/factories/`.
-- Generates comprehensive Playwright test suites in `src/tests/`.
-- Runs `npx playwright test <spec-path> --dry-run` before handoff to confirm zero TypeScript/import errors.
+- Generates comprehensive, **tagged** Playwright test suites in `src/tests/` (`{ tag: '@smoke' }`, etc.).
+- Threads shared state for integration/e2e chains via `test.describe.serial()` with a module-scoped variable (e.g. a created user ID passed from create → read → delete).
+- Adds `afterEach`/`afterAll` cleanup so any resource a test creates gets deleted/reverted — no orphaned test data left behind.
+- Generates **exactly** what was approved in the plan — no silent scope expansion.
+- Runs `npx playwright test <spec-path> --dry-run` before handoff to confirm zero TypeScript/import errors, and checks Environment Safety (below) before executing anything live.
 
 **Healer Agent** (`skill-healer-agent.md`, skill name `playwright-healer`): Never guesses at a fix — diagnoses failures using the Playwright CLI as the source of truth:
-1. Runs `npx playwright test <spec-path> --reporter=json --trace on` and parses the structured JSON report for the failing assertion, HTTP status, and error stack.
-2. If the JSON report doesn't explain the failure, opens the trace with `npx playwright show-trace` to inspect the real request/response payloads and timing.
-3. Falls back to `npx playwright test -g "<title>" --debug` for interactive step-through if still unclear.
+1. Checks the resolved environment is local/QA before running anything (see Environment Safety below).
+2. Runs `npx playwright test <spec-path> --reporter=json --trace on` and parses the structured JSON report for the failing assertion, HTTP status, and error stack — redacting any tokens/credentials before showing report content.
+3. If the JSON report doesn't explain the failure, opens the trace with `npx playwright show-trace` to inspect the real request/response payloads and timing.
+4. Falls back to `npx playwright test -g "<title>" --debug` for interactive step-through if still unclear.
 
-It classifies the root cause (schema mismatch, bad factory data, client/route bug, auth/fixture issue, or a genuine backend contract break) and patches only the layer responsible — it will never silently weaken a Zod schema or delete a failing test to force a pass. Genuine contract breaks are flagged for `contract-diff-analyzer` / the backend team instead of being patched around.
+It classifies the root cause (schema mismatch, bad factory data, client/route bug, auth/fixture issue, broken shared-state threading, or a genuine backend contract break) and patches only the layer responsible. **Retry budget: 3 patch attempts per failing test** — if still failing after that, it stops, reports the test as unresolved with its last diagnosis, and moves on rather than looping indefinitely. It will never silently weaken a Zod schema or delete a failing test to force a pass; genuine contract breaks are flagged for `contract-diff-analyzer` / the backend team instead of being patched around.
 
-**Contract Diff Analyzer** (`skill-contract-diff.md`, skill name `contract-diff-analyzer`): Diffs an updated OpenAPI/Postman spec against the already-generated schemas, clients, and route registry. Non-breaking changes (new optional fields, new endpoints) are auto-applied. Breaking changes (type changes, removed/renamed required fields, removed endpoints) are surfaced in a sync report — old shape vs. new shape and affected files — rather than silently rewritten, and require confirmation before `playwright-generator` regenerates the affected layer.
+**Contract Diff Analyzer** (`skill-contract-diff.md`, skill name `contract-diff-analyzer`): Diffs an updated OpenAPI/Postman spec against the already-generated schemas, clients, and route registry. Non-breaking changes (new optional fields, new endpoints) are auto-applied. Breaking changes (type changes, removed/renamed required fields, removed endpoints) are only listed by default — re-run with `--sync --force` to actually apply them, with each one still logged individually in the sync report.
+
+### Environment Safety (Hard Rule)
+
+Before any agent executes a test against a live server, it checks the resolved `BASE_URL`:
+- `.env.local` or `.env.qa` → runs freely.
+- `.env.staging` or anything not clearly local/QA → **agents stop and ask for your explicit confirmation first.** This applies to the Generator's dry-run, the Healer's diagnostic runs, and Contract Diff's sync verification alike — never assumed safe by default, even mid-heal-loop.
+
+### Secrets Handling (Hard Rule)
+
+Agents never print raw `.env.*` values, bearer tokens, or auth headers into chat, generated code, or report summaries. Auth failures are described by shape (e.g. "token fixture returned an expired JWT"), not by echoing the actual secret.
 
 ### CLI Tooling Reference (used by the agents)
 
@@ -165,6 +202,7 @@ It classifies the root cause (schema mismatch, bad factory data, client/route bu
 | `npx playwright test <file> --reporter=json --trace on` | Healer | Structured failure diagnosis (status, matcher diff, error stack) |
 | `npx playwright show-trace <trace.zip>` | Healer | Inspect real request/response payloads, headers, and timing for a failed call |
 | `npx playwright test <file> -g "<title>" --debug` | Healer | Interactive step-through when the report/trace aren't conclusive |
+| `npx playwright test --grep @<tag>` | Anyone | Run only one test-type category (smoke/sanity/integration/regression/e2e) |
 | `npx playwright test --dry-run` | Generator | Validate zero TypeScript/import errors before executing real requests |
 | `npx playwright show-report` | Healer | Full-suite HTML view after a heal cycle |
 | `npx playwright codegen <url>` | Planner (optional) | Record a real auth/login flow to confirm request/response shapes |
@@ -183,10 +221,22 @@ Place your `openapi.yaml`, `swagger.json`, or Postman collection in the root dir
 /generate openapi.yaml
 ```
 
-- **Planner**: Parses schemas, maps CRUD lifecycles, and drafts the test matrix.
-- **Generator**: Scaffolds `endpoints.ts`, Zod schemas, typed client classes, custom Playwright fixtures, Faker factories, and test specs.
-- **Generator**: Runs a dry run (`npx playwright test --dry-run`) to verify zero TypeScript or import errors.
-- **Healer**: Executes with `--reporter=json --trace on`, diagnoses any failures from the report/trace, patches, and re-runs until green.
+1. **Planner**: Parses schemas, maps dependencies, and drafts a test-case plan organized by type (smoke/sanity/integration/regression/e2e), presented as a text table.
+2. **Review Gate**: Stops and waits. Example output:
+   ```
+   | # | Type | Endpoint(s) | Description | Expected Result |
+   |---|------|-------------|--------------|------------------|
+   | 1 | smoke | POST /auth/login | Valid credentials login | 200 + valid token |
+   | 2 | regression | POST /users | Missing "email" field | 422 + validation error |
+   | 3 | integration | POST /users → GET /users/:id → DELETE /users/:id | Full lifecycle | Each step 2xx, final GET 404 |
+
+   Total: 1 smoke, 0 sanity, 1 integration, 1 regression, 0 e2e (3 test cases)
+   Reply "approved" to generate this, or tell me what to change.
+   ```
+   Reply `approved`, or describe changes (e.g. "add an e2e test for the full checkout flow") and the Planner will revise and re-present.
+3. **Generator**: Once approved, scaffolds `endpoints.ts`, Zod schemas, typed client classes, custom Playwright fixtures, Faker factories, and tagged test specs — exactly matching the approved plan, with cleanup hooks for anything created.
+4. **Generator**: Runs a dry run (`npx playwright test --dry-run`) to verify zero TypeScript or import errors.
+5. **Healer**: Executes with `--reporter=json --trace on`, diagnoses any failures from the report/trace, patches (up to 3 attempts per test), and re-runs until green — or reports the test as unresolved.
 
 ### Scenario 2: Add a Single New Endpoint (Zero-Regression Append)
 
@@ -196,7 +246,7 @@ To add test coverage for a single new endpoint without modifying or breaking exi
 /generate POST /api/v1/users/{id}/reset-password with body { "newPassword": "string" }
 ```
 
-**Behavior**: Operates in Strict Append Mode. Adds the route to `endpoints.ts`, appends the Zod schema and client method, adds a dynamic Faker builder, and appends a new `test.describe()` block at the end of the existing domain spec.
+**Behavior**: Still goes through the Planner and Review Gate first (a short plan for just this one endpoint), then operates in Strict Append Mode. Adds the route to `endpoints.ts`, appends the Zod schema and client method, adds a dynamic Faker builder, and appends a new tagged `test.describe()` block at the end of the existing domain spec — never touches existing tests.
 
 ### Scenario 3: Sync Modified OpenAPI Specs (Contract Drift)
 
@@ -206,7 +256,13 @@ When backend teams update existing endpoints, add required fields, or change res
 /generate openapi.yaml --sync
 ```
 
-**Behavior**: Runs `contract-diff-analyzer` to identify breaking and non-breaking contract changes. Non-breaking changes (new optional fields, new endpoints) are applied directly. Breaking changes are surfaced in a sync report and require confirmation before schemas, factories, or test assertions are regenerated.
+**Behavior**: Runs `contract-diff-analyzer` to identify breaking and non-breaking contract changes. Non-breaking changes (new optional fields, new endpoints) are applied directly. Breaking changes (type changes, removed/renamed required fields, removed endpoints) are only **listed** in the sync report by default — nothing is applied. To actually apply them:
+
+```
+/generate openapi.yaml --sync --force
+```
+
+Each breaking change is still individually logged (old shape vs. new shape, affected files) even with `--force`, so there's a clear record of what changed and why tests were touched.
 
 ### Scenario 4: Autonomous Test Debugging & Self-Healing
 
@@ -216,7 +272,35 @@ If any test fails during execution:
 The tests in src/tests/user.spec.ts failed with error 422. Use playwright-healer to inspect and fix the payload data.
 ```
 
-**Behavior**: The healer re-runs the test with `--reporter=json --trace on`, inspects the JSON report and (if needed) the trace for the actual request/response bodies, classifies the root cause (bad factory data, schema mismatch, client bug, etc.), patches only the responsible layer, and re-verifies until the test passes — falling back to `--debug` for interactive step-through if the cause still isn't clear.
+**Behavior**: The healer first checks the resolved environment is local/QA, then re-runs the test with `--reporter=json --trace on`, inspects the JSON report and (if needed) the trace for the actual request/response bodies (redacting any tokens), classifies the root cause (bad factory data, schema mismatch, client bug, broken shared-state threading, etc.), patches only the responsible layer, and re-verifies — up to 3 attempts. If still failing after that, it reports the test as unresolved with its last diagnosis instead of continuing to loop.
+
+### Scenario 5: Refactor an Existing Codebase to Current Conventions
+
+If tests already exist — hand-written, or generated under older `.gemini/` conventions — and you want them brought up to the current standard (tags, cleanup hooks, serial threading, centralized routes, Faker factories), don't hand-edit them one by one. Run:
+
+```
+/generate --refactor
+```
+
+or target one file:
+
+```
+/generate --refactor src/tests/user.spec.ts
+```
+
+**Behavior**: The Planner audits the file(s) against the checklist below and presents a **refactor plan** (same review-gate pattern — nothing is edited until you approve):
+
+- Missing tags (`@smoke`/`@sanity`/`@integration`/`@regression`/`@e2e`) — inferred from what the test does, marked as "suggested"
+- Missing cleanup for resources a test creates
+- Tests that could be consolidated into `test.describe.serial()` for shared state
+- Hardcoded routes → `src/config/endpoints.ts` references
+- Hardcoded payloads → `@faker-js/faker` factories
+- Missing `Schema.parse(responseJson)` runtime validation
+- Hardcoded credentials → fixture/`process.env` sourcing
+
+**Hard rule: refactor never changes test intent.** No assertion values, expected statuses, or test logic are altered — only structure. Anything that would require changing what a test actually checks is flagged as **"Manual review needed"** in the plan and never auto-applied, even after you approve the rest.
+
+Once approved, the Generator refactors one file at a time and re-runs it after each edit (`npx playwright test <file>`) to confirm identical pass/fail behavior to before the refactor — if behavior changes, it reverts that file and flags it back to you instead of continuing.
 
 ## 5. Running the Tests
 
@@ -246,6 +330,13 @@ npx playwright show-trace test-results/<test-name>/trace.zip
 
 # Step through a specific failing test interactively
 npx playwright test -g "reset-password" --debug
+
+# Run only one test-type category
+npx playwright test --grep @smoke
+npx playwright test --grep @sanity
+npx playwright test --grep @integration
+npx playwright test --grep @regression
+npx playwright test --grep @e2e
 ```
 
 ## 6. Architectural Rules & Best Practices
@@ -256,4 +347,11 @@ npx playwright test -g "reset-password" --debug
 - **Dynamic Data**: Always use `@faker-js/faker` factories in `src/factories/` rather than hardcoding static payload data.
 - **Non-Destructive Appending**: When adding new endpoints to an existing codebase, never overwrite or delete existing working tests.
 - **Evidence-Based Healing**: The Healer never patches or weakens a test based on guesswork — every fix must trace back to the JSON report or trace output. It will never delete/skip a failing test or loosen a Zod schema to force a pass; genuine backend contract breaks are flagged, not patched around.
+- **Bounded Healing**: The Healer stops after 3 patch attempts per test and reports it as unresolved rather than looping indefinitely.
 - **Trace & Reporter Config Required**: `playwright.config.ts` must configure `trace: 'retain-on-failure'` and a JSON reporter output so the Healer always has structured diagnostic data available.
+- **Test Isolation & Cleanup**: Any test that creates a resource must clean it up via `afterEach`/`afterAll` — no orphaned data left in the target environment.
+- **Shared-State Threading**: Dependent multi-step flows (integration/e2e) use `test.describe.serial()` with module-scoped state, never independent/parallel tests for steps that depend on each other.
+- **Environment Safety**: No agent executes a test against anything other than `.env.local`/`.env.qa` without your explicit confirmation first.
+- **Secrets Handling**: No agent ever prints raw credentials, tokens, or auth headers into chat, code, or reports.
+- **Plan Before Code**: The Planner always presents a text test-case plan and waits for approval before the Generator writes anything.
+- **Refactor Never Changes Intent**: Refactor mode only touches structure (tags, cleanup, imports, route/factory references) — never assertion values or test logic. Anything requiring a logic change is flagged for manual review, not auto-applied.

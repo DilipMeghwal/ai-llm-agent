@@ -1,22 +1,13 @@
-import { APIRequestContext, APIResponse } from '@playwright/test';
+import { APIResponse } from '@playwright/test';
+import { BaseClient } from './base.client';
 import { ENDPOINTS } from '../config/endpoints';
 
-export class JmsClient {
-  constructor(private readonly request: APIRequestContext) {}
-
+export class JmsClient extends BaseClient {
   async startupJmsListener(): Promise<APIResponse> {
-    return this.request.post(ENDPOINTS.STARTUP_JMS, {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    return this.post(ENDPOINTS.STARTUP_JMS);
   }
 
   async shutdownJmsListener(): Promise<APIResponse> {
-    return this.request.post(ENDPOINTS.SHUTDOWN_JMS, {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    return this.post(ENDPOINTS.SHUTDOWN_JMS);
   }
 }

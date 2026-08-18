@@ -1,27 +1,17 @@
-import { APIRequestContext, APIResponse } from '@playwright/test';
+import { APIResponse } from '@playwright/test';
+import { BaseClient } from './base.client';
 import { ENDPOINTS } from '../config/endpoints';
 import { UpdateCustomerParams } from '../models/types';
 
-export class CustomersClient {
-  constructor(private readonly request: APIRequestContext) {}
-
+export class CustomersClient extends BaseClient {
   async createAccount(customerId: number | string, newAccountType: number | string, fromAccountId: number | string): Promise<APIResponse> {
-    return this.request.post(
-      `${ENDPOINTS.CREATE_ACCOUNT}?customerId=${customerId}&newAccountType=${newAccountType}&fromAccountId=${fromAccountId}`,
-      {
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
+    return this.post(
+      `${ENDPOINTS.CREATE_ACCOUNT}?customerId=${customerId}&newAccountType=${newAccountType}&fromAccountId=${fromAccountId}`
     );
   }
 
   async getCustomer(customerId: number | string): Promise<APIResponse> {
-    return this.request.get(ENDPOINTS.GET_CUSTOMER(customerId), {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    return this.get(ENDPOINTS.GET_CUSTOMER(customerId));
   }
 
   async updateCustomer(params: UpdateCustomerParams): Promise<APIResponse> {
@@ -38,10 +28,6 @@ export class CustomersClient {
       password: params.password,
     }).toString();
 
-    return this.request.post(`${ENDPOINTS.UPDATE_CUSTOMER(params.customerId)}?${queryParams}`, {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    return this.post(`${ENDPOINTS.UPDATE_CUSTOMER(params.customerId)}?${queryParams}`);
   }
 }
