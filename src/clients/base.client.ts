@@ -18,7 +18,7 @@ export interface RequestMetrics {
 export function createMockApiResponse(
   status: number,
   body: unknown,
-  headers: Record<string, string> = { 'content-type': 'application/json' }
+  headers: Record<string, string> = { 'content-type': 'application/json' },
 ): APIResponse {
   return {
     status: () => status,
@@ -57,7 +57,7 @@ export class BaseClient {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     url: string,
     options: RequestOptions = {},
-    maxRetries = 3
+    maxRetries = 3,
   ): Promise<APIResponse> {
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const headers = {
@@ -73,16 +73,34 @@ export class BaseClient {
       try {
         switch (method) {
           case 'GET':
-            response = await this.requestContext.get(url, { headers, params: options.params, timeout: options.timeout });
+            response = await this.requestContext.get(url, {
+              headers,
+              params: options.params,
+              timeout: options.timeout,
+            });
             break;
           case 'POST':
-            response = await this.requestContext.post(url, { headers, params: options.params, data: options.data, timeout: options.timeout });
+            response = await this.requestContext.post(url, {
+              headers,
+              params: options.params,
+              data: options.data,
+              timeout: options.timeout,
+            });
             break;
           case 'PUT':
-            response = await this.requestContext.put(url, { headers, params: options.params, data: options.data, timeout: options.timeout });
+            response = await this.requestContext.put(url, {
+              headers,
+              params: options.params,
+              data: options.data,
+              timeout: options.timeout,
+            });
             break;
           case 'DELETE':
-            response = await this.requestContext.delete(url, { headers, params: options.params, timeout: options.timeout });
+            response = await this.requestContext.delete(url, {
+              headers,
+              params: options.params,
+              timeout: options.timeout,
+            });
             break;
         }
 

@@ -6,6 +6,7 @@ description: Autonomous pipeline (Planner -> Review Gate -> Generator -> Healer)
 # Command: /generate [spec-path-or-endpoint] [options]
 
 ## Usage Examples
+
 - Full spec generation: `/generate openapi.yaml`
 - Incremental endpoint add: `/generate POST /api/v1/users/{id}/reset-password`
 - Specific endpoint from spec: `/generate openapi.yaml --endpoint /payments/refund`
@@ -19,6 +20,7 @@ description: Autonomous pipeline (Planner -> Review Gate -> Generator -> Healer)
 ## Autonomous Mode Selection
 
 Before drafting a plan, inspect the target workspace and determine the execution mode:
+
 - **FULL_GENERATION**: If domain files DO NOT exist or `--force` is passed (without `--sync`).
 - **INCREMENTAL_APPEND**: If domain files exist and a single endpoint or diff is targeted.
 - **SCHEMA_SYNC**: If `--sync` is passed. Breaking changes apply only with `--sync --force` (see `skill-contract-diff.md`).

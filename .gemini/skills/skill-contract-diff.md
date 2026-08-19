@@ -31,13 +31,15 @@ When `/generate <spec> --sync` is run, compare the new spec against the artifact
 
 ## Confirmation Flow for Breaking Changes
 
-- Default run (`--sync` without `--force`): breaking changes are listed but NOT applied. The sync report ends with: *"N breaking change(s) found — re-run with `--sync --force` to apply them, or address them individually."*
+- Default run (`--sync` without `--force`): breaking changes are listed but NOT applied. The sync report ends with: _"N breaking change(s) found — re-run with `--sync --force` to apply them, or address them individually."_
 - `--sync --force`: breaking changes ARE applied, but each one is still individually listed in the sync report (with old shape vs. new shape) so there's a clear record of what changed and why tests were touched. `--force` here only authorizes applying flagged diffs — it does not skip the review gate for any newly generated code, which still passes through `playwright-generator` → `playwright-healer` normally.
+
 5. Hand off updated/flagged items to `playwright-generator` for code changes, then to `playwright-healer` to re-run and confirm the suite is green.
 
 ## Changelog & Documentation Sync
 
 Every `--sync` run (whether or not `--force` was used):
+
 1. Appends a dated entry to `CHANGELOG.md` at the repo root (summarizing non-breaking vs breaking changes).
 2. Updates `docs/contracts.md` with the updated JSON Schema definitions.
 3. Marks affected test case entries in `docs/test-cases/[domain].test-cases.md` as `🔴 Needs update — contract changed` until re-verified by tests.
@@ -48,13 +50,16 @@ Entry format for `CHANGELOG.md`:
 ## 2026-08-19 — openapi.yaml sync
 
 **Applied (non-breaking):**
+
 - Added optional field `phoneNumber` to `User` response schema
 - Added endpoint `GET /users/:id/orders`
 
 **Flagged (breaking — not applied, run with --force to apply):**
+
 - `User.id` changed type: `number` → `string`
 
 **Applied with --force:**
+
 - (none this run)
 ```
 

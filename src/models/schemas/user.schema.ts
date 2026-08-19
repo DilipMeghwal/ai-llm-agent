@@ -36,7 +36,9 @@ const validateErrorResponse = sharedAjv.compile(errorResponseSchema);
 
 export function parseResetPasswordResponse(data: unknown) {
   if (typeof data === 'object' && data !== null && !validateResetPasswordResponse(data)) {
-    throw new Error(`ResetPasswordResponse schema validation failed: ${sharedAjv.errorsText(validateResetPasswordResponse.errors)}`);
+    throw new Error(
+      `ResetPasswordResponse schema validation failed: ${sharedAjv.errorsText(validateResetPasswordResponse.errors)}`,
+    );
   }
   return data;
 }

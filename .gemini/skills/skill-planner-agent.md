@@ -25,7 +25,7 @@ description: Analyzes API specs, maps dependencies, and drafts a test-case PLAN 
 
 ## Assertion Scope (per test case — not status/schema alone)
 
-Status code + `Schema.parse()` only proves the response has the right shape, not that it's *correct*. For every test case in the plan, specify which of these assertion categories apply — most tests need more than one:
+Status code + `Schema.parse()` only proves the response has the right shape, not that it's _correct_. For every test case in the plan, specify which of these assertion categories apply — most tests need more than one:
 
 1. **Status code** — the HTTP status itself.
 2. **Schema/contract validation** — `Schema.parse(responseJson)`, shape only.
@@ -78,6 +78,7 @@ Triggered by `/generate --refactor [path]` (path optional — defaults to scanni
 ### Audit Checklist
 
 For each existing test file, check for and list gaps against:
+
 - **Missing tags**: tests without `{ tag: '@...' }` — infer the likely type (smoke/sanity/integration/regression/e2e) from what the test does, but flag inferred tags as "suggested" since you're guessing intent from code, not from an approved plan.
 - **Missing cleanup**: a test creates a resource (`POST`/`PUT` with an ID returned) but no `afterEach`/`afterAll` deletes it.
 - **No shared-state threading**: multiple tests manually re-fetch or hardcode an ID that a prior test already created — candidate for `test.describe.serial()` consolidation.

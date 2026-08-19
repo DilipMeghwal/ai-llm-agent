@@ -48,20 +48,20 @@ This repository allows you to parse OpenAPI/Postman specs, get a **plain-text te
 
 ## 2. Architecture Principles
 
-| Principle | Where it shows up |
-|---|---|
-| **Separation of Concerns** | Routes, schemas, clients, fixtures, factories, tests each own exactly one job |
-| **Contract-First / Schema-Driven Testing** | JSON Schemas lifted from the OpenAPI spec are the single source of truth for both types and validation |
-| **DRY via Centralization** | `endpoints.ts` is the only place routes are defined; `api.fixture.ts` is the only place auth logic lives |
-| **Fail-Fast & Falsifiability** | Every assertion must be able to fail — no hedged multi-status matchers, no error-swallowing try/catch |
-| **Gated Autonomy (Human-in-the-Loop)** | Review Gate before generation; `--force` required for breaking sync changes; confirmation required for non-local environments |
-| **Non-Destructive, Additive Change** | Append-only generation; refactor mode that only touches structure, never logic |
-| **Evidence-Based Automation** | The Healer only acts on structured JSON report / trace data — never guesses |
-| **Bounded Autonomy (Circuit Breakers)** | 3-attempt retry cap per test; suite-level 30%-failure-rate breaker for environment-wide issues |
-| **Least Privilege / Secrets Hygiene** | No agent ever echoes tokens/credentials into chat, code, or reports |
-| **Test Pyramid Alignment** | Smoke/sanity/integration/regression/security/e2e tags map directly to CI cadence (fast-and-frequent → slow-and-rare) |
-| **Immutable Contracts** | Routes registered as immutable constants, never string literals scattered across files |
-| **Traceable Governance** | `CHANGELOG.md`, `test-results/unresolved.md`, and Jira-style test-case docs make drift and failures auditable over time, not just visible in the moment |
+| Principle                                  | Where it shows up                                                                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Separation of Concerns**                 | Routes, schemas, clients, fixtures, factories, tests each own exactly one job                                                                           |
+| **Contract-First / Schema-Driven Testing** | JSON Schemas lifted from the OpenAPI spec are the single source of truth for both types and validation                                                  |
+| **DRY via Centralization**                 | `endpoints.ts` is the only place routes are defined; `api.fixture.ts` is the only place auth logic lives                                                |
+| **Fail-Fast & Falsifiability**             | Every assertion must be able to fail — no hedged multi-status matchers, no error-swallowing try/catch                                                   |
+| **Gated Autonomy (Human-in-the-Loop)**     | Review Gate before generation; `--force` required for breaking sync changes; confirmation required for non-local environments                           |
+| **Non-Destructive, Additive Change**       | Append-only generation; refactor mode that only touches structure, never logic                                                                          |
+| **Evidence-Based Automation**              | The Healer only acts on structured JSON report / trace data — never guesses                                                                             |
+| **Bounded Autonomy (Circuit Breakers)**    | 3-attempt retry cap per test; suite-level 30%-failure-rate breaker for environment-wide issues                                                          |
+| **Least Privilege / Secrets Hygiene**      | No agent ever echoes tokens/credentials into chat, code, or reports                                                                                     |
+| **Test Pyramid Alignment**                 | Smoke/sanity/integration/regression/security/e2e tags map directly to CI cadence (fast-and-frequent → slow-and-rare)                                    |
+| **Immutable Contracts**                    | Routes registered as immutable constants, never string literals scattered across files                                                                  |
+| **Traceable Governance**                   | `CHANGELOG.md`, `test-results/unresolved.md`, and Jira-style test-case docs make drift and failures auditable over time, not just visible in the moment |
 
 ## 3. Prerequisites & Setup
 
@@ -178,20 +178,20 @@ The Planner never hands off directly to code generation. It first drafts a plain
 
 Every generated test is tagged with exactly one type using Playwright's native tag syntax, so suites can be run independently:
 
-| Type | Tag | Scope | Typical Run Frequency |
-|---|---|---|---|
-| **Smoke** | `@smoke` | One happy-path call per core endpoint — service is up, auth works | Every deploy, fast (<2 min) |
-| **Sanity** | `@sanity` | Narrow check that a specific recent change works | After a targeted fix/change |
-| **Integration** | `@integration` | Multi-endpoint flows verifying dependent calls work together (e.g. create → read → update → delete) | Per PR / pre-merge |
-| **Regression** | `@regression` | Full per-endpoint matrix — happy path, negative/validation (400/422), not-found (404/409) | Nightly / pre-release |
-| **Security** | `@security` | Auth boundaries (401/403), JWT tampering, IDOR checks, injection probes, CORS/header checks | Nightly / pre-release |
-| **E2E** | `@e2e` | A realistic multi-domain user journey (e.g. register → login → create order → pay → confirm) | Pre-release / staging only |
+| Type            | Tag            | Scope                                                                                               | Typical Run Frequency       |
+| --------------- | -------------- | --------------------------------------------------------------------------------------------------- | --------------------------- |
+| **Smoke**       | `@smoke`       | One happy-path call per core endpoint — service is up, auth works                                   | Every deploy, fast (<2 min) |
+| **Sanity**      | `@sanity`      | Narrow check that a specific recent change works                                                    | After a targeted fix/change |
+| **Integration** | `@integration` | Multi-endpoint flows verifying dependent calls work together (e.g. create → read → update → delete) | Per PR / pre-merge          |
+| **Regression**  | `@regression`  | Full per-endpoint matrix — happy path, negative/validation (400/422), not-found (404/409)           | Nightly / pre-release       |
+| **Security**    | `@security`    | Auth boundaries (401/403), JWT tampering, IDOR checks, injection probes, CORS/header checks         | Nightly / pre-release       |
+| **E2E**         | `@e2e`         | A realistic multi-domain user journey (e.g. register → login → create order → pay → confirm)        | Pre-release / staging only  |
 
 Run a subset with: `npx playwright test --grep @smoke`
 
 ### Assertion Scope (beyond status + schema)
 
-Status code + `parseX()`/schema validation only proves a response has the right *shape* — not that it's *correct*. The Planner tags every test case with which of these categories apply, and the Generator implements all of them, not just the first two:
+Status code + `parseX()`/schema validation only proves a response has the right _shape_ — not that it's _correct_. The Planner tags every test case with which of these categories apply, and the Generator implements all of them, not just the first two:
 
 1. **Status code**
 2. **Schema/contract validation** (shape only)
@@ -207,6 +207,7 @@ Status code + `parseX()`/schema validation only proves a response has the right 
 **Planner Agent** (`skill-planner-agent.md`, skill name `playwright-planner`): Analyzes the OpenAPI/Postman specification, resolves execution order and shared-state dependencies, and drafts the test-case plan organized by type above — presented as a text table for review, never as code. Each row lists which assertion categories apply, so gaps are visible before code is generated. Can optionally use `npx playwright codegen <url>` to record a real auth/login flow when the spec is fronted by a live UI, to confirm actual request/response shapes before drafting the plan.
 
 **Generator Agent** (`skill-generator-agent.md`, skill name `playwright-generator`): Once the plan is approved, implements code following clean SDET patterns:
+
 - Registers immutable routes in `src/config/endpoints.ts`.
 - Generates JSON Schema contracts (compiled with AJV) and TypeScript interfaces inferred via `json-schema-to-ts` in `src/models/` — see the AJV Schema Convention below.
 - Generates typed domain clients in `src/clients/`.
@@ -257,6 +258,7 @@ export function parseUser(data: unknown): User {
 Test specs call `parseUser(responseJson)` — never `ajv.compile()` inline in a test. When generating from `openapi.yaml`, schemas are lifted directly from `components.schemas` where possible (OpenAPI schemas are JSON Schema already), with OpenAPI 3.0's `nullable: true` converted to a proper `type: [X, "null"]` union during extraction.
 
 **Healer Agent** (`skill-healer-agent.md`, skill name `playwright-healer`): Never guesses at a fix — diagnoses failures using the Playwright CLI as the source of truth:
+
 1. Checks the resolved environment is local/QA before running anything (see Environment Safety below).
 2. Runs `npx playwright test <spec-path> --reporter=json --trace on` and parses the structured JSON report for the failing assertion, HTTP status, and error stack — redacting any tokens/credentials before showing report content.
 3. If the JSON report doesn't explain the failure, opens the trace with `npx playwright show-trace` to inspect the real request/response payloads and timing.
@@ -269,6 +271,7 @@ It classifies the root cause (schema mismatch, bad factory data, client/route bu
 ### No Unfalsifiable Tests (Hard Rule)
 
 A test that can't fail is worse than no test — it creates false confidence. Agents never generate:
+
 - Multi-status OR matching (`expect([200, 400, 500]).toContain(response.status())`) — the plan specifies one expected status per test case; different possible outcomes are different test cases, not one hedged test.
 - Error-swallowing try/catch (`catch { expect(true).toBe(true) }`) — if a request can throw, the test should let it throw and fail.
 - Any tautological assertion that passes regardless of the actual response.
@@ -278,6 +281,7 @@ If the correct expected outcome is genuinely unclear, the agent stops and asks r
 ### Environment Safety (Hard Rule)
 
 Before any agent executes a test against a live server, it checks the resolved `BASE_URL`:
+
 - `.env.local` or `.env.qa` → runs freely.
 - `.env.staging` or anything not clearly local/QA → **agents stop and ask for your explicit confirmation first.** This applies to the Generator's dry-run, the Healer's diagnostic runs, and Contract Diff's sync verification alike — never assumed safe by default, even mid-heal-loop.
 
@@ -287,15 +291,15 @@ Agents never print raw `.env.*` values, bearer tokens, or auth headers into chat
 
 ### CLI Tooling Reference (used by the agents)
 
-| Command | Used By | Purpose |
-|---|---|---|
-| `npx playwright test <file> --reporter=json --trace on` | Healer | Structured failure diagnosis (status, matcher diff, error stack) |
-| `npx playwright show-trace <trace.zip>` | Healer | Inspect real request/response payloads, headers, and timing for a failed call |
-| `npx playwright test <file> -g "<title>" --debug` | Healer | Interactive step-through when the report/trace aren't conclusive |
-| `npx playwright test --grep @<tag>` | Anyone | Run only one test-type category (smoke/sanity/integration/regression/e2e) |
-| `npx playwright test --dry-run` | Generator | Validate zero TypeScript/import errors before executing real requests |
-| `npx playwright show-report` | Healer | Full-suite HTML view after a heal cycle |
-| `npx playwright codegen <url>` | Planner (optional) | Record a real auth/login flow to confirm request/response shapes |
+| Command                                                 | Used By            | Purpose                                                                       |
+| ------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------- |
+| `npx playwright test <file> --reporter=json --trace on` | Healer             | Structured failure diagnosis (status, matcher diff, error stack)              |
+| `npx playwright show-trace <trace.zip>`                 | Healer             | Inspect real request/response payloads, headers, and timing for a failed call |
+| `npx playwright test <file> -g "<title>" --debug`       | Healer             | Interactive step-through when the report/trace aren't conclusive              |
+| `npx playwright test --grep @<tag>`                     | Anyone             | Run only one test-type category (smoke/sanity/integration/regression/e2e)     |
+| `npx playwright test --dry-run`                         | Generator          | Validate zero TypeScript/import errors before executing real requests         |
+| `npx playwright show-report`                            | Healer             | Full-suite HTML view after a heal cycle                                       |
+| `npx playwright codegen <url>`                          | Planner (optional) | Record a real auth/login flow to confirm request/response shapes              |
 
 > **Config requirement**: `playwright.config.ts` must set `trace: 'retain-on-failure'` (or at minimum `'on-first-retry'`) and a JSON reporter (`reporter: [['json', { outputFile: 'test-results/report.json' }], ['html']]`) so the Healer always has structured data to parse without extra flags.
 
@@ -322,11 +326,11 @@ export function buildUser() {
 
 `.github/workflows/playwright-tests.yml` is included in this repo, wiring the test-type tags into actual CI triggers instead of leaving them unused:
 
-| Trigger | Runs | Purpose |
-|---|---|---|
-| Push / PR | `@smoke` | Fast feedback on every commit/PR |
+| Trigger                    | Runs                                                                          | Purpose                                               |
+| -------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Push / PR                  | `@smoke`                                                                      | Fast feedback on every commit/PR                      |
 | Workflow Dispatch (Manual) | Dropdown choice: `smoke`, `sanity`, `integration`, `regression`, `e2e`, `all` | On-demand targeted execution for specific test suites |
-| Nightly schedule | `@regression` + `@integration` + `@e2e` + `@sanity` | Full suite coverage on schedule |
+| Nightly schedule           | `@regression` + `@integration` + `@e2e` + `@sanity`                           | Full suite coverage on schedule                       |
 
 The nightly job also surfaces `test-results/unresolved.md` directly in the GitHub Actions run summary, so unresolved Healer failures are visible without digging through logs. `FULL_GENERATION` mode scaffolds this file once on a brand-new project if it doesn't already exist — the agents don't regenerate it on every `/generate` run since it's infrastructure, not per-domain code.
 
@@ -354,12 +358,14 @@ Every `src/tests/[domain].spec.ts` has a companion `docs/test-cases/[domain].tes
 **So that** my available balance increases by the deposited amount
 
 **Test Steps:**
-| Step | Action | Expected Result |
-|---|---|---|
-| 1 | POST /accounts/{id}/deposit with { amount: 100 } | 200 OK |
-| 2 | Inspect response body | newBalance equals startingBalance + 100 exactly |
+
+| Step | Action                                           | Expected Result                                 |
+| ---- | ------------------------------------------------ | ----------------------------------------------- |
+| 1    | POST /accounts/{id}/deposit with { amount: 100 } | 200 OK                                          |
+| 2    | Inspect response body                            | newBalance equals startingBalance + 100 exactly |
 
 **Acceptance Criteria:**
+
 - [ ] Response status is exactly 200
 - [ ] newBalance is arithmetically correct, not just present
 
@@ -498,6 +504,16 @@ npx playwright test --grep @sanity
 npx playwright test --grep @integration
 npx playwright test --grep @regression
 npx playwright test --grep @e2e
+
+# Run Code Quality & Formatting Checks (ESLint + Prettier)
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+
+# Generate & Open Allure Enterprise Test Reports
+npm run allure:generate
+npm run allure:open
 ```
 
 ## 7. Architectural Rules & Best Practices
@@ -528,28 +544,31 @@ npx playwright test --grep @e2e
 ### High-Value Use Cases for Docker & Kubernetes/Helm
 
 #### 1. Ephemeral Test Environments (Preview Environments per PR)
+
 - **The Problem**: Testing against a single shared Staging/Dev environment leads to test data collisions, dirty database states, and flaky tests.
 - **The Helm Solution**: Using Helm charts, your CI pipeline can spin up a fresh, isolated instance of your target API microservices + database in Kubernetes for **each Pull Request**, run this Playwright test suite against it, and tear down the Helm release when done.
 - **Flow**:
   `PR Opened` ➔ `Helm Install (Deploy Microservices to K8s)` ➔ `Run Playwright Tests` ➔ `Helm Uninstall (Teardown)`
 
 #### 2. Testing Internal & Private VPC Microservices
+
 - **The Problem**: Security policies often prevent public GitHub Actions runners from accessing internal APIs, private databases, or staging clusters behind a VPN/Firewall.
 - **The Helm Solution**: You can deploy self-hosted GitHub Action runners (using **Actions Runner Controller - ARC**) or run Playwright tests directly inside your Kubernetes cluster via **Kubernetes `Jobs` / `CronJobs`** managed via Helm.
 - **Value**: Zero firewall friction, direct cluster DNS resolution (`http://user-service.default.svc.cluster.local`), and secure API execution.
 
 #### 3. Large-Scale Distributed Parallel Execution
+
 - **The Problem**: When your test suite grows to thousands of tests, running them on a single CI machine becomes a bottleneck.
 - **The K8s/Helm Solution**: You can deploy a K8s Job template via Helm that scales dynamically to **20–50 parallel pods**, each running a Playwright `--shard=x/n` slice. Tests that take 45 minutes serially finish in **under 2 minutes**.
 
 ### Evaluation Matrix: When to Use K8s/Helm
 
-| Scenario | Recommended Strategy | Why? |
-|---|---|---|
-| **Current Setup (< 100 API tests, public endpoint)** | **GitHub Actions + Docker Container** *(Current Setup)* | Super fast, 0 infrastructure maintenance, completely free. |
-| **Testing APIs behind private VPN / Corporate Firewall** | **Kubernetes + Helm (Self-hosted Runners / K8s Jobs)** | Necessary for internal network access and security compliance. |
-| **Needs Ephemeral Environments per Pull Request** | **Helm Charts for Microservice Deployment** | Guarantees clean test data per run. |
-| **Large Enterprise Test Suites (1,000+ tests)** | **K8s Parallel Jobs Sharding via Helm** | Infinite horizontal scalability across cluster nodes. |
+| Scenario                                                 | Recommended Strategy                                    | Why?                                                           |
+| -------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------- |
+| **Current Setup (< 100 API tests, public endpoint)**     | **GitHub Actions + Docker Container** _(Current Setup)_ | Super fast, 0 infrastructure maintenance, completely free.     |
+| **Testing APIs behind private VPN / Corporate Firewall** | **Kubernetes + Helm (Self-hosted Runners / K8s Jobs)**  | Necessary for internal network access and security compliance. |
+| **Needs Ephemeral Environments per Pull Request**        | **Helm Charts for Microservice Deployment**             | Guarantees clean test data per run.                            |
+| **Large Enterprise Test Suites (1,000+ tests)**          | **K8s Parallel Jobs Sharding via Helm**                 | Infinite horizontal scalability across cluster nodes.          |
 
 ### Implementation Roadmap & Next Steps
 
@@ -557,4 +576,3 @@ npx playwright test --grep @e2e
 2. **Future Helm Migration**: If expanding to internal microservices or ephemeral environments, create a `helm/` chart directory containing:
    - `values.yaml`: Dynamic environment configuration (`BASE_URL`, database endpoints, role tokens).
    - `templates/test-job.yaml`: Kubernetes Job manifest to trigger Playwright test suites on demand inside the cluster.
-

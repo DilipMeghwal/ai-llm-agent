@@ -11,7 +11,23 @@
     "test:regression": "playwright test --grep @regression",
     "test:e2e": "playwright test --grep @e2e",
     "test:parallel": "playwright test",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "allure:generate": "allure generate allure-results --clean -o allure-report",
+    "allure:open": "allure open allure-report",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -24,9 +40,23 @@
     "dotenv": "^17.4.2"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/eslint-parser": "^8.0.1",
+    "@babel/preset-typescript": "^8.0.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
+    "allure-commandline": "^2.43.0",
+    "allure-playwright": "^3.10.2",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-playwright": "^2.11.0",
+    "eslint-plugin-prettier": "^5.5.6",
+    "husky": "^9.1.7",
     "json-schema-to-ts": "^3.1.1",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
     "typescript": "^7.0.2"
   }
 }

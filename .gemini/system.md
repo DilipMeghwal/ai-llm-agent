@@ -39,14 +39,14 @@ The Planner **never** hands off directly to the Generator. After drafting a test
 
 Every generated test is tagged with exactly one primary type via Playwright's tag syntax (`test('title', { tag: '@smoke' }, async () => {...})`), so suites can be filtered independently:
 
-| Type | Tag | Scope | Typical Run Frequency |
-|---|---|---|---|
-| **Smoke** | `@smoke` | Minimal critical-path check — service is up, auth works, 1 happy-path call per core endpoint | Every deploy, fast (<2 min) |
-| **Sanity** | `@sanity` | Narrow verification that a specific recent change works, no broad coverage | After a targeted fix/change |
-| **Integration** | `@integration` | Multi-endpoint flows verifying dependent calls work together (e.g. create → read → update → delete chain) | Per PR / pre-merge |
-| **Regression** | `@regression` | Full matrix per endpoint — happy path, negative/validation (400/422), not-found (404/409) | Nightly / pre-release |
-| **Security** | `@security` | Auth boundaries (401/403), JWT tampering, IDOR (can user A reach user B's resource by ID), basic injection payloads in string fields, CORS/header checks | Nightly / pre-release |
-| **E2E** | `@e2e` | Full real-world user journey spanning multiple domains (e.g. register → login → create order → pay → confirm) | Pre-release / staging only |
+| Type            | Tag            | Scope                                                                                                                                                    | Typical Run Frequency       |
+| --------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| **Smoke**       | `@smoke`       | Minimal critical-path check — service is up, auth works, 1 happy-path call per core endpoint                                                             | Every deploy, fast (<2 min) |
+| **Sanity**      | `@sanity`      | Narrow verification that a specific recent change works, no broad coverage                                                                               | After a targeted fix/change |
+| **Integration** | `@integration` | Multi-endpoint flows verifying dependent calls work together (e.g. create → read → update → delete chain)                                                | Per PR / pre-merge          |
+| **Regression**  | `@regression`  | Full matrix per endpoint — happy path, negative/validation (400/422), not-found (404/409)                                                                | Nightly / pre-release       |
+| **Security**    | `@security`    | Auth boundaries (401/403), JWT tampering, IDOR (can user A reach user B's resource by ID), basic injection payloads in string fields, CORS/header checks | Nightly / pre-release       |
+| **E2E**         | `@e2e`         | Full real-world user journey spanning multiple domains (e.g. register → login → create order → pay → confirm)                                            | Pre-release / staging only  |
 
 Run a subset with: `npx playwright test --grep @smoke`. See `.github/workflows/playwright-tests.yml` for how each tag maps to a CI trigger (push → smoke, nightly schedule → regression + security, release/manual dispatch → e2e).
 
@@ -54,16 +54,16 @@ Run a subset with: `npx playwright test --grep @smoke`. See `.github/workflows/p
 
 All agents have shell access to the Playwright CLI. Prefer these commands over guessing at failures:
 
-| Command | Used By | Purpose |
-|---|---|---|
-| `npx playwright test <file> --reporter=json --trace on` | Healer | Machine-readable failure output + forced trace capture |
-| `npx playwright show-trace <trace.zip>` | Healer | Inspect request/response bodies, headers, and timing for a failed API call |
-| `npx playwright test <file> --debug` | Healer | Step-through debugging when JSON report + trace aren't conclusive |
-| `npx playwright test <file> -g "<title>"` | Healer / Generator | Re-run a single test/describe block after a patch |
-| `npx playwright test --grep @<tag>` | Anyone | Run only one test-type category (smoke/sanity/integration/regression/e2e) |
-| `npx playwright test --dry-run` | Generator | Validate zero TypeScript/import errors before executing real requests |
-| `npx playwright show-report` | Healer | Open the HTML report for a full-suite view after a heal cycle |
-| `npx playwright codegen <url>` | Planner (optional) | Record an auth/login flow against a UI-fronted API to confirm real request/response shapes |
+| Command                                                 | Used By            | Purpose                                                                                    |
+| ------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| `npx playwright test <file> --reporter=json --trace on` | Healer             | Machine-readable failure output + forced trace capture                                     |
+| `npx playwright show-trace <trace.zip>`                 | Healer             | Inspect request/response bodies, headers, and timing for a failed API call                 |
+| `npx playwright test <file> --debug`                    | Healer             | Step-through debugging when JSON report + trace aren't conclusive                          |
+| `npx playwright test <file> -g "<title>"`               | Healer / Generator | Re-run a single test/describe block after a patch                                          |
+| `npx playwright test --grep @<tag>`                     | Anyone             | Run only one test-type category (smoke/sanity/integration/regression/e2e)                  |
+| `npx playwright test --dry-run`                         | Generator          | Validate zero TypeScript/import errors before executing real requests                      |
+| `npx playwright show-report`                            | Healer             | Open the HTML report for a full-suite view after a heal cycle                              |
+| `npx playwright codegen <url>`                          | Planner (optional) | Record an auth/login flow against a UI-fronted API to confirm real request/response shapes |
 
 `playwright.config.ts` must have `trace: 'retain-on-failure'` (minimum `'on-first-retry'`) and a `reporter: [['json', { outputFile: 'test-results/report.json' }], ['html']]` entry so the Healer can always parse structured failure data without extra flags.
 
@@ -87,15 +87,15 @@ See `skill-generator-agent.md` (Forbidden Patterns) and `skill-healer-agent.md` 
 
 ## Secrets Handling (Hard Rule)
 
-Agents must never print raw values from `.env.*` files, bearer tokens, API keys, or auth headers into chat output, generated code comments, logs, or the JSON report summary shown to the user. When diagnosing 401/403 failures, describe the *shape* of the problem (e.g. "token fixture returned an expired/malformed JWT") without echoing the actual secret value. Redact any credential-like string (`Bearer ...`, `Authorization: ...`, password fields) before including trace or report excerpts in a response.
+Agents must never print raw values from `.env.*` files, bearer tokens, API keys, or auth headers into chat output, generated code comments, logs, or the JSON report summary shown to the user. When diagnosing 401/403 failures, describe the _shape_ of the problem (e.g. "token fixture returned an expired/malformed JWT") without echoing the actual secret value. Redact any credential-like string (`Bearer ...`, `Authorization: ...`, password fields) before including trace or report excerpts in a response.
 
 ## Manual Version Control / No Auto-Push (Hard Rule)
 
 Agents must **NEVER** automatically execute `git push` or `git commit` after generating, refactoring, or healing tests.
+
 - All pipeline phases (Plan → Review → Generate → Heal) complete locally upon test execution & verification (`npx playwright test`).
 - Code changes must remain in the local working directory.
 - `git commit` and `git push` commands must **ONLY** be executed when the user explicitly requests it in chat (e.g., "commit the changes", "push the code to github").
-
 
 ## Suite-Level Circuit Breaker (Hard Rule)
 
@@ -114,6 +114,7 @@ The Healer's 3-attempt retry budget is per-test, but a whole-environment outage 
 ## CI Integration
 
 `.github/workflows/playwright-tests.yml` (or your CI's equivalent) should trigger tag-scoped runs rather than the full suite every time:
+
 - On push / PR → `@smoke` (fast feedback)
 - Nightly schedule → `@regression` + `@security` + `@integration`
 - On release / manual dispatch → `@e2e`

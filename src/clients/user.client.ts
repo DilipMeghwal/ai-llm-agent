@@ -4,7 +4,10 @@ import { ENDPOINTS } from '../config/endpoints';
 import { ResetPasswordRequest, LoginRequest } from '../models/types/user.type';
 
 export class UserClient extends BaseClient {
-  constructor(requestContext: APIRequestContext, public isUnauth: boolean = false) {
+  constructor(
+    requestContext: APIRequestContext,
+    public isUnauth: boolean = false,
+  ) {
     super(requestContext);
   }
 
@@ -15,7 +18,7 @@ export class UserClient extends BaseClient {
   async resetPassword(
     id: string | number,
     data?: ResetPasswordRequest,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): Promise<APIResponse> {
     try {
       const realRes = await this.post(ENDPOINTS.USERS.RESET_PASSWORD(id), {
@@ -35,7 +38,7 @@ export class UserClient extends BaseClient {
   private mockResetPassword(
     id: string | number,
     data?: ResetPasswordRequest,
-    options: RequestOptions = {}
+    options: RequestOptions = {},
   ): APIResponse {
     if (this.isUnauth) {
       return createMockApiResponse(401, {

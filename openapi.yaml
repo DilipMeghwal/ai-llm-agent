@@ -12,54 +12,54 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0
   version: 3.0.0
 servers:
-- url: /parabank/services/bank
+  - url: /parabank/services/bank
 tags:
-- name: Accounts
-  description: account centric operations
-- name: Customers
-  description: customer centric operations
-- name: Database
-  description: data management operations
-- name: JMS
-  description: message service operations
-- name: Loans
-  description: request loan operations
-- name: Misc
-  description: miscelaneous operations
-- name: Positions
-  description: stock centric operations
-- name: Transactions
-  description: banking transactions centric operations
+  - name: Accounts
+    description: account centric operations
+  - name: Customers
+    description: customer centric operations
+  - name: Database
+    description: data management operations
+  - name: JMS
+    description: message service operations
+  - name: Loans
+    description: request loan operations
+  - name: Misc
+    description: miscelaneous operations
+  - name: Positions
+    description: stock centric operations
+  - name: Transactions
+    description: banking transactions centric operations
 paths:
   /billpay:
     post:
       tags:
-      - Accounts
+        - Accounts
       summary: Pay bill
       operationId: billPay
       parameters:
-      - name: accountId
-        in: query
-        description: Bill payment source account
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: amount
-        in: query
-        description: Amount
-        required: true
-        schema:
-          type: number
+        - name: accountId
+          in: query
+          description: Bill payment source account
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: amount
+          in: query
+          description: Amount
+          required: true
+          schema:
+            type: number
       requestBody:
         description: Payee
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Payee"
+              $ref: '#/components/schemas/Payee'
           application/xml:
             schema:
-              $ref: "#/components/schemas/Payee"
+              $ref: '#/components/schemas/Payee'
         required: true
       responses:
         default:
@@ -67,56 +67,56 @@ paths:
           content:
             application/xml:
               schema:
-                $ref: "#/components/schemas/BillPayResult"
+                $ref: '#/components/schemas/BillPayResult'
             application/json:
               schema:
-                $ref: "#/components/schemas/BillPayResult"
+                $ref: '#/components/schemas/BillPayResult'
   /customers/{customerId}/buyPosition:
     post:
       tags:
-      - Positions
+        - Positions
       summary: Buy a Position
       operationId: buyPosition
       parameters:
-      - name: customerId
-        in: path
-        description: Customer's id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: accountId
-        in: query
-        description: Customer funds source account
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: name
-        in: query
-        description: Instrument's Name
-        required: true
-        schema:
-          type: string
-      - name: symbol
-        in: query
-        description: Instrument's exchange symbol
-        required: true
-        schema:
-          type: string
-      - name: shares
-        in: query
-        description: number of shares
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: pricePerShare
-        in: query
-        description: Price of each share
-        required: true
-        schema:
-          type: number
+        - name: customerId
+          in: path
+          description: Customer's id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: accountId
+          in: query
+          description: Customer funds source account
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: name
+          in: query
+          description: Instrument's Name
+          required: true
+          schema:
+            type: string
+        - name: symbol
+          in: query
+          description: Instrument's exchange symbol
+          required: true
+          schema:
+            type: string
+        - name: shares
+          in: query
+          description: number of shares
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: pricePerShare
+          in: query
+          description: Price of each share
+          required: true
+          schema:
+            type: number
       responses:
         default:
           description: default response
@@ -125,16 +125,16 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Position"
+                  $ref: '#/components/schemas/Position'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Position"
+                  $ref: '#/components/schemas/Position'
   /cleanDB:
     post:
       tags:
-      - Database
+        - Database
       summary: Clean the Database
       operationId: cleanDB
       responses:
@@ -146,62 +146,62 @@ paths:
   /createAccount:
     post:
       tags:
-      - Customers
-      - Accounts
+        - Customers
+        - Accounts
       summary: Create a new account
       operationId: createAccount
       parameters:
-      - name: customerId
-        in: query
-        description: Customer's id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: newAccountType
-        in: query
-        description: "Account type (CHECKING, SAVINGS, LOAN)"
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: fromAccountId
-        in: query
-        description: Customer funds source account
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: customerId
+          in: query
+          description: Customer's id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: newAccountType
+          in: query
+          description: 'Account type (CHECKING, SAVINGS, LOAN)'
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: fromAccountId
+          in: query
+          description: Customer funds source account
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
           content:
             application/xml:
               schema:
-                $ref: "#/components/schemas/Account"
+                $ref: '#/components/schemas/Account'
             application/json:
               schema:
-                $ref: "#/components/schemas/Account"
+                $ref: '#/components/schemas/Account'
   /deposit:
     post:
       tags:
-      - Accounts
+        - Accounts
       summary: Deposit funds
       operationId: deposit
       parameters:
-      - name: accountId
-        in: query
-        description: Customer funds target account
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: amount
-        in: query
-        description: Amount
-        required: true
-        schema:
-          type: number
+        - name: accountId
+          in: query
+          description: Customer funds target account
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: amount
+          in: query
+          description: Amount
+          required: true
+          schema:
+            type: number
       responses:
         default:
           description: default response
@@ -215,42 +215,42 @@ paths:
   /accounts/{accountId}:
     get:
       tags:
-      - Accounts
+        - Accounts
       summary: Get Account by Id
       operationId: getAccount
       parameters:
-      - name: accountId
-        in: path
-        description: Account id
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: accountId
+          in: path
+          description: Account id
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
           content:
             application/xml:
               schema:
-                $ref: "#/components/schemas/Account"
+                $ref: '#/components/schemas/Account'
             application/json:
               schema:
-                $ref: "#/components/schemas/Account"
+                $ref: '#/components/schemas/Account'
   /customers/{customerId}/accounts:
     get:
       tags:
-      - Customers
-      - Accounts
+        - Customers
+        - Accounts
       summary: Get Customer Accounts
       operationId: getAccounts
       parameters:
-      - name: customerId
-        in: path
-        description: Customer's id
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: customerId
+          in: path
+          description: Customer's id
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
@@ -259,86 +259,86 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Account"
+                  $ref: '#/components/schemas/Account'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Account"
+                  $ref: '#/components/schemas/Account'
   /customers/{customerId}:
     get:
       tags:
-      - Customers
+        - Customers
       summary: Get Customer Details
       operationId: getCustomer
       parameters:
-      - name: customerId
-        in: path
-        description: Customer's id
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: customerId
+          in: path
+          description: Customer's id
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
           content:
             application/xml:
               schema:
-                $ref: "#/components/schemas/Customer"
+                $ref: '#/components/schemas/Customer'
             application/json:
               schema:
-                $ref: "#/components/schemas/Customer"
+                $ref: '#/components/schemas/Customer'
   /positions/{positionId}:
     get:
       tags:
-      - Positions
+        - Positions
       summary: Get Position by id
       operationId: getPosition
       parameters:
-      - name: positionId
-        in: path
-        description: Unique identifier for the position
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: positionId
+          in: path
+          description: Unique identifier for the position
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
           content:
             application/xml:
               schema:
-                $ref: "#/components/schemas/Position"
+                $ref: '#/components/schemas/Position'
             application/json:
               schema:
-                $ref: "#/components/schemas/Position"
+                $ref: '#/components/schemas/Position'
   /positions/{positionId}/{startDate}/{endDate}:
     get:
       tags:
-      - Positions
+        - Positions
       summary: Get Position history by id within a date range
       operationId: getPositionHistory
       parameters:
-      - name: positionId
-        in: path
-        description: Unique identifier for the position
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: startDate
-        in: path
-        description: Search starting date
-        required: true
-        schema:
-          type: string
-      - name: endDate
-        in: path
-        description: Search ending date
-        required: true
-        schema:
-          type: string
+        - name: positionId
+          in: path
+          description: Unique identifier for the position
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: startDate
+          in: path
+          description: Search starting date
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: path
+          description: Search ending date
+          required: true
+          schema:
+            type: string
       responses:
         default:
           description: default response
@@ -347,27 +347,27 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/HistoryPoint"
+                  $ref: '#/components/schemas/HistoryPoint'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/HistoryPoint"
+                  $ref: '#/components/schemas/HistoryPoint'
   /customers/{customerId}/positions:
     get:
       tags:
-      - Customers
-      - Positions
+        - Customers
+        - Positions
       summary: Get Positions for Customer
       operationId: getPositions
       parameters:
-      - name: customerId
-        in: path
-        description: Customer's id
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: customerId
+          in: path
+          description: Customer's id
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
@@ -376,51 +376,51 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Position"
+                  $ref: '#/components/schemas/Position'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Position"
+                  $ref: '#/components/schemas/Position'
   /transactions/{transactionId}:
     get:
       tags:
-      - Transactions
+        - Transactions
       summary: Get the transaction for the id
       operationId: getTransaction
       parameters:
-      - name: transactionId
-        in: path
-        description: Unique identifier for the transaction
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: transactionId
+          in: path
+          description: Unique identifier for the transaction
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
           content:
             application/xml:
               schema:
-                $ref: "#/components/schemas/Transaction"
+                $ref: '#/components/schemas/Transaction'
             application/json:
               schema:
-                $ref: "#/components/schemas/Transaction"
+                $ref: '#/components/schemas/Transaction'
   /accounts/{accountId}/transactions:
     get:
       tags:
-      - Accounts
-      - Transactions
+        - Accounts
+        - Transactions
       summary: Get the list of Transactions for the account
       operationId: getTransactions
       parameters:
-      - name: accountId
-        in: path
-        description: Account id
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: accountId
+          in: path
+          description: Account id
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
@@ -429,33 +429,33 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
   /accounts/{accountId}/transactions/amount/{amount}:
     get:
       tags:
-      - Accounts
-      - Transactions
+        - Accounts
+        - Transactions
       summary: Create transactions by amount for account
       operationId: getTransactionsByAmount
       parameters:
-      - name: accountId
-        in: path
-        description: Account id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: amount
-        in: path
-        description: Amount
-        required: true
-        schema:
-          type: number
+        - name: accountId
+          in: path
+          description: Account id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: amount
+          in: path
+          description: Amount
+          required: true
+          schema:
+            type: number
       responses:
         default:
           description: default response
@@ -464,39 +464,39 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
   /accounts/{accountId}/transactions/month/{month}/type/{type}:
     get:
       tags:
-      - Accounts
-      - Transactions
+        - Accounts
+        - Transactions
       summary: Fetch transactions by month and type for account
       operationId: getTransactionsByMonthAndType
       parameters:
-      - name: accountId
-        in: path
-        description: Account id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: month
-        in: path
-        description: Month to use for the search range
-        required: true
-        schema:
-          type: string
-      - name: type
-        in: path
-        description: "Transaction type (CREDIT, DEBIT)"
-        required: true
-        schema:
-          type: string
+        - name: accountId
+          in: path
+          description: Account id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: month
+          in: path
+          description: Month to use for the search range
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: path
+          description: 'Transaction type (CREDIT, DEBIT)'
+          required: true
+          schema:
+            type: string
       responses:
         default:
           description: default response
@@ -505,39 +505,39 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
   /accounts/{accountId}/transactions/fromDate/{fromDate}/toDate/{toDate}:
     get:
       tags:
-      - Accounts
-      - Transactions
+        - Accounts
+        - Transactions
       summary: Fetch transactions for date range for account
       operationId: getTransactionsByToFromDate
       parameters:
-      - name: accountId
-        in: path
-        description: Account id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: fromDate
-        in: path
-        description: Search starting date
-        required: true
-        schema:
-          type: string
-      - name: toDate
-        in: path
-        description: Search ending date
-        required: true
-        schema:
-          type: string
+        - name: accountId
+          in: path
+          description: Account id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: fromDate
+          in: path
+          description: Search starting date
+          required: true
+          schema:
+            type: string
+        - name: toDate
+          in: path
+          description: Search ending date
+          required: true
+          schema:
+            type: string
       responses:
         default:
           description: default response
@@ -546,33 +546,33 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
   /accounts/{accountId}/transactions/onDate/{onDate}:
     get:
       tags:
-      - Accounts
-      - Transactions
+        - Accounts
+        - Transactions
       summary: Fetch transactions for a specific date for account
       operationId: getTransactionsOnDate
       parameters:
-      - name: accountId
-        in: path
-        description: Account id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: onDate
-        in: path
-        description: Search specific date
-        required: true
-        schema:
-          type: string
+        - name: accountId
+          in: path
+          description: Account id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: onDate
+          in: path
+          description: Search specific date
+          required: true
+          schema:
+            type: string
       responses:
         default:
           description: default response
@@ -581,16 +581,16 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Transaction"
+                  $ref: '#/components/schemas/Transaction'
   /initializeDB:
     post:
       tags:
-      - Database
+        - Database
       summary: Initialize the Database
       operationId: initializeDB
       responses:
@@ -602,116 +602,116 @@ paths:
   /login/{username}/{password}:
     get:
       tags:
-      - Misc
+        - Misc
       summary: Login (john/demo)
       operationId: login
       parameters:
-      - name: username
-        in: path
-        description: Customer's user name
-        required: true
-        schema:
-          type: string
-      - name: password
-        in: path
-        description: Customer's password
-        required: true
-        schema:
-          type: string
+        - name: username
+          in: path
+          description: Customer's user name
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: path
+          description: Customer's password
+          required: true
+          schema:
+            type: string
       responses:
         default:
           description: default response
           content:
             application/xml:
               schema:
-                $ref: "#/components/schemas/Customer"
+                $ref: '#/components/schemas/Customer'
             application/json:
               schema:
-                $ref: "#/components/schemas/Customer"
+                $ref: '#/components/schemas/Customer'
   /requestLoan:
     post:
       tags:
-      - Loans
+        - Loans
       summary: Request a loan
       operationId: requestLoan
       parameters:
-      - name: customerId
-        in: query
-        description: Customer's id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: amount
-        in: query
-        description: Amount
-        required: true
-        schema:
-          type: number
-      - name: downPayment
-        in: query
-        description: Downpayment for the loan
-        required: true
-        schema:
-          type: number
-      - name: fromAccountId
-        in: query
-        description: Customer funds source account
-        required: true
-        schema:
-          type: integer
-          format: int32
+        - name: customerId
+          in: query
+          description: Customer's id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: amount
+          in: query
+          description: Amount
+          required: true
+          schema:
+            type: number
+        - name: downPayment
+          in: query
+          description: Downpayment for the loan
+          required: true
+          schema:
+            type: number
+        - name: fromAccountId
+          in: query
+          description: Customer funds source account
+          required: true
+          schema:
+            type: integer
+            format: int32
       responses:
         default:
           description: default response
           content:
             application/xml:
               schema:
-                $ref: "#/components/schemas/LoanResponse"
+                $ref: '#/components/schemas/LoanResponse'
             application/json:
               schema:
-                $ref: "#/components/schemas/LoanResponse"
+                $ref: '#/components/schemas/LoanResponse'
   /customers/{customerId}/sellPosition:
     post:
       tags:
-      - Positions
+        - Positions
       summary: Sell a Position
       operationId: sellPosition
       parameters:
-      - name: customerId
-        in: path
-        description: Customer's id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: accountId
-        in: query
-        description: Customer funds target account
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: positionId
-        in: query
-        description: Unique identifier for the position
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: shares
-        in: query
-        description: number of shares
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: pricePerShare
-        in: query
-        description: Price of each share
-        required: true
-        schema:
-          type: number
+        - name: customerId
+          in: path
+          description: Customer's id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: accountId
+          in: query
+          description: Customer funds target account
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: positionId
+          in: query
+          description: Unique identifier for the position
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: shares
+          in: query
+          description: number of shares
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: pricePerShare
+          in: query
+          description: Price of each share
+          required: true
+          schema:
+            type: number
       responses:
         default:
           description: default response
@@ -720,31 +720,31 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Position"
+                  $ref: '#/components/schemas/Position'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Position"
+                  $ref: '#/components/schemas/Position'
   /setParameter/{name}/{value}:
     post:
       tags:
-      - Misc
+        - Misc
       summary: Set Parameters
       operationId: setParameter
       parameters:
-      - name: name
-        in: path
-        description: Parameter Name
-        required: true
-        schema:
-          type: string
-      - name: value
-        in: path
-        description: Parameter Value
-        required: true
-        schema:
-          type: string
+        - name: name
+          in: path
+          description: Parameter Name
+          required: true
+          schema:
+            type: string
+        - name: value
+          in: path
+          description: Parameter Value
+          required: true
+          schema:
+            type: string
       responses:
         default:
           description: default response
@@ -754,7 +754,7 @@ paths:
   /shutdownJmsListener:
     post:
       tags:
-      - JMS
+        - JMS
       summary: Stop JMS Listener
       operationId: shutdownJmsListener
       responses:
@@ -766,7 +766,7 @@ paths:
   /startupJmsListener:
     post:
       tags:
-      - JMS
+        - JMS
       summary: Start JMS Listener
       operationId: startupJmsListener
       responses:
@@ -778,30 +778,30 @@ paths:
   /transfer:
     post:
       tags:
-      - Accounts
+        - Accounts
       summary: Transfer funds
       operationId: transfer
       parameters:
-      - name: fromAccountId
-        in: query
-        description: Customer funds source account
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: toAccountId
-        in: query
-        description: Customer funds target account
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: amount
-        in: query
-        description: Amount
-        required: true
-        schema:
-          type: number
+        - name: fromAccountId
+          in: query
+          description: Customer funds source account
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: toAccountId
+          in: query
+          description: Customer funds target account
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: amount
+          in: query
+          description: Amount
+          required: true
+          schema:
+            type: number
       responses:
         default:
           description: default response
@@ -815,77 +815,77 @@ paths:
   /customers/update/{customerId}:
     post:
       tags:
-      - Customers
+        - Customers
       summary: Update customer information
       operationId: updateCustomer
       parameters:
-      - name: customerId
-        in: path
-        description: Customer's id
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: firstName
-        in: query
-        description: Customer's given (first) name
-        required: true
-        schema:
-          type: string
-      - name: lastName
-        in: query
-        description: Customer's surname (last name)
-        required: true
-        schema:
-          type: string
-      - name: street
-        in: query
-        description: Street Address including bilding number and apartment (if any)
-        required: true
-        schema:
-          type: string
-      - name: city
-        in: query
-        description: City
-        required: true
-        schema:
-          type: string
-      - name: state
-        in: query
-        description: US state or Region name
-        required: true
-        schema:
-          type: string
-      - name: zipCode
-        in: query
-        description: ZIP code or province id
-        required: true
-        schema:
-          type: string
-      - name: phoneNumber
-        in: query
-        description: Contact Phone Number
-        required: true
-        schema:
-          type: string
-      - name: ssn
-        in: query
-        description: Social Security Number
-        required: true
-        schema:
-          type: string
-      - name: username
-        in: query
-        description: Customer's user name
-        required: true
-        schema:
-          type: string
-      - name: password
-        in: query
-        description: Customer's password
-        required: true
-        schema:
-          type: string
+        - name: customerId
+          in: path
+          description: Customer's id
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: firstName
+          in: query
+          description: Customer's given (first) name
+          required: true
+          schema:
+            type: string
+        - name: lastName
+          in: query
+          description: Customer's surname (last name)
+          required: true
+          schema:
+            type: string
+        - name: street
+          in: query
+          description: Street Address including bilding number and apartment (if any)
+          required: true
+          schema:
+            type: string
+        - name: city
+          in: query
+          description: City
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: US state or Region name
+          required: true
+          schema:
+            type: string
+        - name: zipCode
+          in: query
+          description: ZIP code or province id
+          required: true
+          schema:
+            type: string
+        - name: phoneNumber
+          in: query
+          description: Contact Phone Number
+          required: true
+          schema:
+            type: string
+        - name: ssn
+          in: query
+          description: Social Security Number
+          required: true
+          schema:
+            type: string
+        - name: username
+          in: query
+          description: Customer's user name
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: query
+          description: Customer's password
+          required: true
+          schema:
+            type: string
       responses:
         default:
           description: default response
@@ -899,23 +899,23 @@ paths:
   /withdraw:
     post:
       tags:
-      - Accounts
+        - Accounts
       summary: Withdraw funds
       operationId: withdraw
       parameters:
-      - name: accountId
-        in: query
-        description: Customer funds source account
-        required: true
-        schema:
-          type: integer
-          format: int32
-      - name: amount
-        in: query
-        description: Amount
-        required: true
-        schema:
-          type: number
+        - name: accountId
+          in: query
+          description: Customer funds source account
+          required: true
+          schema:
+            type: integer
+            format: int32
+        - name: amount
+          in: query
+          description: Amount
+          required: true
+          schema:
+            type: number
       responses:
         default:
           description: default response
@@ -957,7 +957,7 @@ components:
         name:
           type: string
         address:
-          $ref: "#/components/schemas/Address"
+          $ref: '#/components/schemas/Address'
         phoneNumber:
           type: string
         accountNumber:
@@ -995,9 +995,9 @@ components:
         type:
           type: string
           enum:
-          - CHECKING
-          - SAVINGS
-          - LOAN
+            - CHECKING
+            - SAVINGS
+            - LOAN
         balance:
           type: number
       xml:
@@ -1013,7 +1013,7 @@ components:
         lastName:
           type: string
         address:
-          $ref: "#/components/schemas/Address"
+          $ref: '#/components/schemas/Address'
         phoneNumber:
           type: string
         ssn:
@@ -1045,8 +1045,8 @@ components:
         type:
           type: string
           enum:
-          - Credit
-          - Debit
+            - Credit
+            - Debit
         date:
           type: string
           format: date-time
@@ -1058,7 +1058,7 @@ components:
         name: transaction
     LoanResponse:
       required:
-      - loanProviderName
+        - loanProviderName
       type: object
       properties:
         responseDate:

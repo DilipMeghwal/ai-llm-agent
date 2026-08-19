@@ -16,6 +16,7 @@ Before executing anything, resolve the active `ENV`/`BASE_URL`. If it is not cle
 ## Pre-Flight: Suite-Level Circuit Breaker
 
 Before entering the per-test patch loop, check the overall failure rate from the first full run. **If more than 30% of tests failed**, do not start patching them individually — that's very likely one shared root cause (environment down, expired shared test credentials, a genuine widespread contract break), not 15 unrelated bugs. Instead:
+
 1. Inspect 2-3 of the failures for a common pattern (same error type/status/timeout).
 2. Report the likely shared cause to the user and stop, rather than burning the per-test retry budget on symptoms.
 3. Only proceed to the normal per-test loop below once the failure rate drops under this threshold, or the user confirms the failures are genuinely unrelated.
@@ -23,15 +24,19 @@ Before entering the per-test patch loop, check the overall failure rate from the
 ## Diagnosis Workflow
 
 1. **Run with structured output**:
+
    ```bash
    npx playwright test <spec-path> --reporter=json --trace on > test-results/report.json
    ```
+
    Parse `report.json` for: failing test title, expected vs. actual matcher values, HTTP status code, and error stack. Redact any `Authorization`, `Bearer`, cookie, or password-like value before quoting report content back to the user.
 
 2. **If the JSON report doesn't explain the failure** (e.g., an AJV validation error with no obvious mismatched field, or a flaky timing issue), pull the trace:
+
    ```bash
    npx playwright show-trace test-results/<test-name>/trace.zip
    ```
+
    Inspect the actual request payload sent, response body received, response headers, and timing waterfall — again, redact credential-like values before summarizing.
 
 3. **If still unclear**, step through interactively:
@@ -59,9 +64,11 @@ Classify the failure into one of the following explicit categories before attemp
 ## Patch & Re-verify Loop (Bounded)
 
 After each patch:
+
 ```bash
 npx playwright test <spec-path> -g "<test-title>"
 ```
+
 - **Retry budget: 3 patch attempts per failing test.** Track attempt count per test.
 - If a test still fails after 3 attempts, **stop patching that test**, mark it clearly as "unresolved after 3 attempts" in the final summary along with the last diagnosis, and move on — do not keep retrying indefinitely or escalate to broader refactors.
 - **Write unresolved tests to `test-results/unresolved.md`** (create if absent, append if present) with: test name, file path, attempt count, last diagnosis, and the trace file path if one was captured. This keeps unresolved failures trackable across sessions instead of only living in chat scrollback. Also update the test's entry in `docs/test-cases/[domain].test-cases.md` (Status → `⚠️ Unresolved`) if that doc exists.

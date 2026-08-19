@@ -6,17 +6,21 @@ description: Generates or appends strongly-typed, tagged Playwright code, AJV/JS
 # Agent Skill: Generator
 
 ## Objectives
+
 Consume the **approved** plan from `playwright-planner` (never generate from an unapproved draft) and generate/modify the following layers:
 
 ### 1. Route Registry (`src/config/endpoints.ts`)
+
 - Append/register immutable endpoint keys and parameterized route functions.
 
 ### 2. Contract & Types (`src/models/`) — AJV / JSON Schema Convention
+
 - `schemas/[domain].schema.ts`: JSON Schema definitions (`as const`) for request payloads and response contracts, compiled with AJV, wrapped in a `parseX()` helper that throws on validation failure — this mirrors the ergonomics of `Schema.parse()` at every call site.
 - `types/[domain].types.ts`: TypeScript interfaces inferred from the JSON Schema via `FromSchema<typeof schema>` (`json-schema-to-ts`) — no hand-duplicated types.
 - **Prefer lifting schemas directly from the OpenAPI spec's `components.schemas`** when generating from `openapi.yaml` — OpenAPI schemas are JSON Schema already, so this avoids re-authoring contracts by hand. Caveat: OpenAPI 3.0 uses `nullable: true` instead of standard JSON Schema `type: [X, "null"]` — convert this during extraction so AJV validates it correctly.
 
 Standard pattern for every domain schema file:
+
 ```ts
 // src/models/schemas/user.schema.ts
 import Ajv from 'ajv';
@@ -48,9 +52,11 @@ export function parseUser(data: unknown): User {
   return data as User;
 }
 ```
+
 `additionalProperties: false` is the default posture (matches Zod's default strictness) — only relax it when the spec explicitly allows extension fields.
 
 ### 3. Clients & Fixtures (`src/clients/` & `src/fixtures/`)
+
 - `clients/[domain].client.ts`: Expose strongly typed methods wrapping `APIRequestContext`.
 - `fixtures/api.fixture.ts`: Register domain clients into Playwright's `test.extend` fixture registry.
 - **Rate-limit/backoff handling**: `src/clients/base.client.ts` must treat HTTP 429 (and 502/503) as retryable, not as a hard failure or an acceptable outcome to assert on. Implement exponential backoff with a capped retry count:
@@ -68,6 +74,7 @@ export function parseUser(data: unknown): User {
   Never write a test that treats 429 as an accepted outcome (`expect([200, 429]).toContain(...)`) — that's the multi-status forbidden pattern. Retry transparently in the client; the test only sees the real final result.
 
 ### 4. Dynamic Factories (`src/factories/[domain].factory.ts`)
+
 - Build `@faker-js/faker` test data builders for valid and mutated negative test payloads.
 - **Test data collision safety**: for any field that must be unique (email, username, etc.), suffix generated values with a run-scoped or worker-scoped identifier so parallel/sharded test runs never collide:
   ```ts
@@ -88,12 +95,14 @@ export function parseUser(data: unknown): User {
   Never generate a factory with a hardcoded/static unique field — that's a guaranteed collision under parallel execution or repeated runs against a persistent environment.
 
 ### 5. Security Test Generation (for `@security` plan rows)
+
 - **Auth boundary**: call the endpoint with no token, an expired token, and a malformed/tampered token — assert 401 in each case with the specific error body, not just "some 4xx."
 - **IDOR**: create a resource as User A, attempt to read/update/delete it as User B — assert 403/404 (per the spec's actual documented behavior; don't assume which one without checking).
 - **Injection probes**: for string input fields, include a factory variant with common injection payloads (e.g. `' OR '1'='1`, `<script>alert(1)</script>`) and assert the API either rejects it (400/422) or safely stores/escapes it — never assert success without checking the field wasn't executed/reflected unsafely.
 - **CORS/headers**: where the spec defines them, assert expected security headers are present on responses (e.g. no `Access-Control-Allow-Origin: *` on an authenticated endpoint, if that's the documented policy).
 
 ### 6. Test Specs (`src/tests/[domain].spec.ts`)
+
 - Write tests using custom fixtures with strict runtime validation via the domain's `parseX()` helper (e.g. `parseUser(responseJson)`), never inline `ajv.compile()` calls inside a test.
 - **Implement every assertion category listed for that test case in the approved plan** — status/schema alone is the floor, not the ceiling. Concretely, for a given test case:
   - Assert the status code.
@@ -109,6 +118,7 @@ export function parseUser(data: unknown): User {
 For every `tests/[domain].spec.ts` generated or appended, produce/update a companion Jira-style test case document at `docs/test-cases/[domain].test-cases.md`. This document must be **framework-agnostic, generic, and readable by everyone** (QA leads, product managers, business analysts, auditors).
 
 **Hard Rules for Test Case Documentation**:
+
 - **No Code Implementation Coupling**: Do NOT include code variable names, class names, client fixture names (`userClient`, `adminUserClient`), code helper/factory names (`buildUser()`), or test runner constructs (`describe.serial()`, `test.step()`).
 - **Generic Preconditions & Test Data**: State preconditions and test data in plain business/API terms (e.g. "Authenticated user with admin authorization", "Valid User Registration Payload").
 - **Clean Business Actions**: Step actions and expected results must describe business-level API calls without code snippets.
@@ -127,19 +137,22 @@ One entry per approved plan row, in this format:
 **So that** the full resource lifecycle behaves consistently and leaves no orphaned data
 
 **Preconditions:**
+
 - Authenticated user with administrative privileges
 
 **Test Steps:**
-| Step | Action | Expected Result |
-|---|---|---|
-| 1 | Send a `POST` request to `/users` with a valid, unique payload | HTTP `201 Created` status returned with created User ID |
-| 2 | Send a `GET` request to `/users/{id}` using the created User ID | HTTP `200 OK` status returned with matching user details |
-| 3 | Send a `DELETE` request to `/users/{id}` | HTTP `204 No Content` status returned |
-| 4 | Send a `GET` request to `/users/{id}` again | HTTP `404 Not Found` status returned, confirming deletion |
+
+| Step | Action                                                          | Expected Result                                           |
+| ---- | --------------------------------------------------------------- | --------------------------------------------------------- |
+| 1    | Send a `POST` request to `/users` with a valid, unique payload  | HTTP `201 Created` status returned with created User ID   |
+| 2    | Send a `GET` request to `/users/{id}` using the created User ID | HTTP `200 OK` status returned with matching user details  |
+| 3    | Send a `DELETE` request to `/users/{id}`                        | HTTP `204 No Content` status returned                     |
+| 4    | Send a `GET` request to `/users/{id}` again                     | HTTP `404 Not Found` status returned, confirming deletion |
 
 **Test Data:** Valid User Details (Unique Username/Email)
 
 **Acceptance Criteria:**
+
 - [ ] Each step returns the exact designated HTTP status code
 - [ ] Retrospective GET response fields match submitted creation fields
 - [ ] Resource is deleted upon completion to prevent orphaned test data
@@ -157,11 +170,11 @@ Whenever a JSON Schema in `src/models/schemas/` is created or changed, update th
 ```markdown
 ## User
 
-| Field | Type | Required | Format | Notes |
-|---|---|---|---|---|
-| id | string | ✅ | uuid | |
-| email | string | ✅ | email | |
-| createdAt | string | ✅ | date-time | |
+| Field     | Type   | Required | Format    | Notes |
+| --------- | ------ | -------- | --------- | ----- |
+| id        | string | ✅       | uuid      |       |
+| email     | string | ✅       | email     |       |
+| createdAt | string | ✅       | date-time |       |
 ```
 
 ### 9. Global Setup (when the plan requires shared suite-wide state)
@@ -195,6 +208,7 @@ Generate **exactly** the test cases listed in the approved plan — no more, no 
 ## Cleanup & Test Isolation
 
 Every test (or `describe.serial` block) that creates a resource must clean it up:
+
 - Prefer an `afterEach`/`afterAll` hook that deletes/reverts anything created during the test, using the same client the test used.
 - For integration/e2e chains, the final step of the chain should itself be (or be followed by) a cleanup call — don't leave orphaned records in the target environment.
 - If the API has no delete/revert endpoint for a resource, note this explicitly as a comment in the generated spec so a human knows manual cleanup may be needed.
