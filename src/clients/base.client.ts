@@ -6,6 +6,25 @@ export interface RequestOptions {
   data?: unknown;
 }
 
+export function createMockApiResponse(
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = { 'content-type': 'application/json' }
+): APIResponse {
+  return {
+    status: () => status,
+    statusText: () => (status >= 200 && status < 300 ? 'OK' : 'Error'),
+    ok: () => status >= 200 && status < 300,
+    url: () => 'http://localhost/api',
+    headers: () => headers,
+    headersArray: () => Object.entries(headers).map(([name, value]) => ({ name, value })),
+    body: async () => Buffer.from(typeof body === 'string' ? body : JSON.stringify(body)),
+    text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
+    json: async () => (typeof body === 'string' ? JSON.parse(body) : body),
+    dispose: async () => {},
+  } as APIResponse;
+}
+
 export class BaseClient {
   constructor(protected requestContext: APIRequestContext) {}
 

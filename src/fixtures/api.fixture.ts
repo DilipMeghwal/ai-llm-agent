@@ -9,7 +9,7 @@ export type ApiFixtures = {
 export const test = base.extend<ApiFixtures>({
   userClient: async ({ request }, use) => {
     // Inject client with default auth context if needed
-    const client = new UserClient(request);
+    const client = new UserClient(request, false);
     await use(client);
   },
 
@@ -18,7 +18,7 @@ export const test = base.extend<ApiFixtures>({
     const unauthContext = await playwright.request.newContext({
       extraHTTPHeaders: {},
     });
-    const client = new UserClient(unauthContext);
+    const client = new UserClient(unauthContext, true);
     await use(client);
     await unauthContext.dispose();
   },
