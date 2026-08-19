@@ -1,0 +1,117 @@
+name: Playwright API Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Nightly regression + security + integration run, 02:00 UTC
+    - cron: "0 2 * * *"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Test tag to run (smoke | sanity | integration | regression | security | e2e | all)"
+        required: false
+        default: "smoke"
+
+jobs:
+  smoke:
+    name: Smoke Tests
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - name: Run smoke tests
+        run: npx playwright test --grep @smoke
+        env:
+          ENV: qa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-report
+          path: playwright-report/
+
+  nightly-regression:
+    name: Nightly Regression + Security + Integration
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - name: Run regression, security, and integration suites
+        run: npx playwright test --grep "@regression|@security|@integration"
+        env:
+          ENV: qa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-report
+          path: playwright-report/
+      - name: Report unresolved tests
+        if: always()
+        run: |
+          if [ -f test-results/unresolved.md ]; then
+            echo "## Unresolved tests found" >> $GITHUB_STEP_SUMMARY
+            cat test-results/unresolved.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+  e2e-pre-release:
+    name: End-to-End (pre-release)
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.tag == 'e2e' || github.event.inputs.tag == 'all'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - name: Run E2E suite
+        run: npx playwright test --grep @e2e
+        env:
+          ENV: staging
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-report
+          path: playwright-report/
+
+  manual-dispatch:
+    name: Manual Run (${{ github.event.inputs.tag }})
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag != 'e2e' && github.event.inputs.tag != 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - name: Run selected tag
+        run: npx playwright test --grep "@${{ github.event.inputs.tag }}"
+        env:
+          ENV: qa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: manual-report
+          path: playwright-report/
+
+# Notes:
+# - ENV maps to your .env.qa / .env.staging convention — never point CI at production.
+# - Adjust the cron schedule and branch filters to match your team's release cadence.
+# - The `nightly-regression` job surfaces test-results/unresolved.md directly in the
+#   GitHub Actions run summary so unresolved Healer failures are visible without
+#   digging through logs.

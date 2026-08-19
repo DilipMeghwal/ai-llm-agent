@@ -5,9 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "test:parallel": "playwright test --workers=4",
-    "test:shard:1": "playwright test --shard=1/2",
-    "test:shard:2": "playwright test --shard=2/2",
+    "test:parallel": "playwright test",
     "test:report": "playwright show-report"
   },
   "keywords": [],
@@ -16,12 +14,14 @@
   "type": "commonjs",
   "dependencies": {
     "@faker-js/faker": "^10.6.0",
-    "dotenv": "^17.4.2",
-    "zod": "^4.4.3"
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
+    "json-schema-to-ts": "^3.1.1",
     "typescript": "^7.0.2"
   }
 }

@@ -1,48 +1,26 @@
 import { test as base } from '@playwright/test';
-import { AccountsClient } from '../clients/accounts.client';
-import { CustomersClient } from '../clients/customers.client';
-import { DatabaseClient } from '../clients/database.client';
-import { JmsClient } from '../clients/jms.client';
-import { LoansClient } from '../clients/loans.client';
-import { MiscClient } from '../clients/misc.client';
-import { PositionsClient } from '../clients/positions.client';
-import { TransactionsClient } from '../clients/transactions.client';
+import { UserClient } from '../clients/user.client';
 
 export type ApiFixtures = {
-  accountsClient: AccountsClient;
-  customersClient: CustomersClient;
-  databaseClient: DatabaseClient;
-  jmsClient: JmsClient;
-  loansClient: LoansClient;
-  miscClient: MiscClient;
-  positionsClient: PositionsClient;
-  transactionsClient: TransactionsClient;
+  userClient: UserClient;
+  unauthClient: UserClient;
 };
 
 export const test = base.extend<ApiFixtures>({
-  accountsClient: async ({ request }, use) => {
-    await use(new AccountsClient(request));
+  userClient: async ({ request }, use) => {
+    // Inject client with default auth context if needed
+    const client = new UserClient(request);
+    await use(client);
   },
-  customersClient: async ({ request }, use) => {
-    await use(new CustomersClient(request));
-  },
-  databaseClient: async ({ request }, use) => {
-    await use(new DatabaseClient(request));
-  },
-  jmsClient: async ({ request }, use) => {
-    await use(new JmsClient(request));
-  },
-  loansClient: async ({ request }, use) => {
-    await use(new LoansClient(request));
-  },
-  miscClient: async ({ request }, use) => {
-    await use(new MiscClient(request));
-  },
-  positionsClient: async ({ request }, use) => {
-    await use(new PositionsClient(request));
-  },
-  transactionsClient: async ({ request }, use) => {
-    await use(new TransactionsClient(request));
+
+  unauthClient: async ({ playwright }, use) => {
+    // Isolated unauthenticated request context
+    const unauthContext = await playwright.request.newContext({
+      extraHTTPHeaders: {},
+    });
+    const client = new UserClient(unauthContext);
+    await use(client);
+    await unauthContext.dispose();
   },
 });
 

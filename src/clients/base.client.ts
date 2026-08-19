@@ -1,28 +1,41 @@
 import { APIRequestContext, APIResponse } from '@playwright/test';
 
-/**
- * Base API Client
- * Provides common HTTP request wrapper methods with standard JSON headers.
- */
-export abstract class BaseClient {
-  constructor(protected readonly request: APIRequestContext) {}
+export interface RequestOptions {
+  headers?: Record<string, string>;
+  params?: Record<string, string | number | boolean>;
+  data?: unknown;
+}
 
-  protected async get(path: string, headers?: Record<string, string>): Promise<APIResponse> {
-    return this.request.get(path, {
-      headers: {
-        'Accept': 'application/json',
-        ...headers,
-      },
+export class BaseClient {
+  constructor(protected requestContext: APIRequestContext) {}
+
+  async post(url: string, options: RequestOptions = {}): Promise<APIResponse> {
+    return this.requestContext.post(url, {
+      headers: options.headers,
+      params: options.params,
+      data: options.data,
     });
   }
 
-  protected async post(path: string, data?: unknown, headers?: Record<string, string>): Promise<APIResponse> {
-    return this.request.post(path, {
-      headers: {
-        'Accept': 'application/json',
-        ...headers,
-      },
-      ...(data !== undefined ? { data } : {}),
+  async get(url: string, options: RequestOptions = {}): Promise<APIResponse> {
+    return this.requestContext.get(url, {
+      headers: options.headers,
+      params: options.params,
+    });
+  }
+
+  async put(url: string, options: RequestOptions = {}): Promise<APIResponse> {
+    return this.requestContext.put(url, {
+      headers: options.headers,
+      params: options.params,
+      data: options.data,
+    });
+  }
+
+  async delete(url: string, options: RequestOptions = {}): Promise<APIResponse> {
+    return this.requestContext.delete(url, {
+      headers: options.headers,
+      params: options.params,
     });
   }
 }

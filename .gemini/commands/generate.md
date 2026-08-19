@@ -39,14 +39,18 @@ Before drafting a plan, inspect the target workspace and determine the execution
    - If changes are requested, revise the plan and return to step 1 output. Repeat until approved.
 
 3. **Generation Phase** (`playwright-generator`) — only after approval:
-   - Write or append to `endpoints.ts`, Zod schemas, domain clients, fixtures, factories, and spec files — exactly matching the approved plan, tagged by type (`@smoke`, `@sanity`, `@integration`, `@regression`, `@e2e`).
+   - Write or append to `endpoints.ts`, JSON Schemas (AJV), domain clients, fixtures, factories, and spec files — exactly matching the approved plan, tagged by type (`@smoke`, `@sanity`, `@integration`, `@regression`, `@security`, `@e2e`).
    - Thread shared state for integration/e2e chains via `test.describe.serial()`.
-   - Add cleanup/teardown for any created resources.
+   - Add cleanup/teardown for any created resources; use `src/global-setup.ts` for suite-wide shared state instead of per-file duplication.
+   - Apply rate-limit/backoff handling in the client layer and collision-safe unique fields in factories.
+   - Generate/update the companion `docs/test-cases/[domain].test-cases.md` (Jira-style) and `docs/contracts.md`.
+   - On `FULL_GENERATION` for a brand-new project, scaffold `.github/workflows/playwright-tests.yml` if it doesn't already exist (see the template in the repo root).
    - Check Environment Safety (`system.md`) before executing anything against a live server.
    - Run `npx playwright test <spec-path> --dry-run` to confirm zero TypeScript/import errors.
 
 4. **Self-Healing Phase** (`playwright-healer`):
    - Execute: `npx playwright test <spec-path> --reporter=json --trace on > test-results/report.json`.
+   - Check the suite-level circuit breaker (>30% failure rate → report a likely shared root cause instead of patching individually).
    - Execute target test: `npx playwright test <spec-path> -g "<test-title>"`.
-   - If tests fail, invoke `playwright-healer` to inspect the JSON report / trace, patch code, and re-run — up to 3 attempts per test. Unresolved tests after 3 attempts are reported, not force-passed.
+   - If tests fail, invoke `playwright-healer` to inspect the JSON report / trace, patch code, and re-run — up to 3 attempts per test. Unresolved tests after 3 attempts are written to `test-results/unresolved.md` and reported, not force-passed.
    - On success, run `npx playwright show-report` for a final full-suite confirmation.
