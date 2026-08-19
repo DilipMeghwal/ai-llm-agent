@@ -324,9 +324,9 @@ export function buildUser() {
 
 | Trigger | Runs | Purpose |
 |---|---|---|
-| Push / PR | `@smoke` | Fast feedback, every change |
-| Nightly schedule | `@regression` + `@security` + `@integration` | Deeper coverage without blocking every PR |
-| Release / manual dispatch | `@e2e` | Full user-journey coverage before shipping |
+| Push / PR | `@smoke` | Fast feedback on every commit/PR |
+| Workflow Dispatch (Manual) | Dropdown choice: `smoke`, `sanity`, `integration`, `regression`, `e2e`, `all` | On-demand targeted execution for specific test suites |
+| Nightly schedule | `@regression` + `@integration` + `@e2e` + `@sanity` | Full suite coverage on schedule |
 
 The nightly job also surfaces `test-results/unresolved.md` directly in the GitHub Actions run summary, so unresolved Healer failures are visible without digging through logs. `FULL_GENERATION` mode scaffolds this file once on a brand-new project if it doesn't already exist — the agents don't regenerate it on every `/generate` run since it's infrastructure, not per-domain code.
 

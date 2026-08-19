@@ -5,6 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:sanity": "playwright test --grep @sanity",
+    "test:integration": "playwright test --grep @integration",
+    "test:regression": "playwright test --grep @regression",
+    "test:e2e": "playwright test --grep @e2e",
     "test:parallel": "playwright test",
     "test:report": "playwright show-report"
   },

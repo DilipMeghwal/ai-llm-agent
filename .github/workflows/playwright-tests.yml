@@ -6,18 +6,30 @@ on:
   pull_request:
     branches: [ main, develop ]
 #  schedule:
-#    # Run regression & security suites nightly at 00:00 UTC
+#    # Run regression, integration & e2e suites nightly at 00:00 UTC
 #    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
-      test_tag:
-        description: 'Test tag to execute (@smoke, @sanity, @regression, @security, @integration, @e2e)'
+      test_suite:
+        description: 'Select test suite to run'
         required: true
-        default: '@smoke'
+        default: 'smoke'
+        type: choice
+        options:
+          - 'smoke'
+          - 'sanity'
+          - 'integration'
+          - 'regression'
+          - 'e2e'
+          - 'all'
+      test_tag:
+        description: 'Custom tag/grep expression (Optional - overrides test_suite selection)'
+        required: false
+        default: ''
 
 jobs:
   smoke-tests:
-    name: Smoke Test Matrix (Fast Feedback)
+    name: Smoke Test Suite (Fast Feedback)
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -31,7 +43,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
       - name: Execute Smoke Tests
-        run: npx playwright test --grep @smoke
+        run: npm run test:smoke
       - name: Upload HTML Test Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -40,32 +52,8 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  nightly-regression:
-    name: Nightly Full Regression, Security & Integration Suite
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-      - name: Execute Nightly Suite (@regression, @security, @integration)
-        run: npx playwright test --grep "@regression|@security|@integration"
-      - name: Upload HTML Test Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-test-report
-          path: playwright-report/
-          retention-days: 30
-
   manual-dispatch:
-    name: Tag-Targeted Dispatch Execution
+    name: Manual Suite Execution (${{ inputs.test_suite || inputs.test_tag }})
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -78,15 +66,57 @@ jobs:
         run: npm ci
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-      - name: Execute Selected Tag
-        run: npx playwright test --grep "${{ github.event.inputs.test_tag }}"
+      - name: Execute Selected Test Suite
+        run: |
+          CUSTOM_TAG="${{ github.event.inputs.test_tag }}"
+          SUITE="${{ github.event.inputs.test_suite }}"
+
+          if [ -n "$CUSTOM_TAG" ]; then
+            echo "Running custom test tag expression: $CUSTOM_TAG"
+            npx playwright test --grep "$CUSTOM_TAG"
+          else
+            echo "Running selected test suite: $SUITE"
+            case "$SUITE" in
+              smoke)        npm run test:smoke ;;
+              sanity)       npm run test:sanity ;;
+              integration)  npm run test:integration ;;
+              regression)   npm run test:regression ;;
+              e2e)          npm run test:e2e ;;
+              all)          npm run test ;;
+              *)            npx playwright test --grep "$SUITE" ;;
+            esac
+          fi
       - name: Upload HTML Test Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dispatch-test-report
+          name: dispatch-${{ inputs.test_suite || 'custom' }}-test-report
           path: playwright-report/
           retention-days: 14
+
+  nightly-regression:
+    name: Nightly Full Regression, Integration & E2E Suite
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Execute Nightly Suite (@regression, @integration, @e2e, @sanity)
+        run: npx playwright test --grep "@regression|@integration|@e2e|@sanity"
+      - name: Upload HTML Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-test-report
+          path: playwright-report/
+          retention-days: 30
 
   openapi-drift-check:
     name: OpenAPI Spec Drift Detection Job
