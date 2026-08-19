@@ -1,6 +1,6 @@
-import { test, expect } from '../src/fixtures/api.fixture';
-import { UserFactory } from '../src/factories/user.factory';
-import { parseResetPasswordResponse, parseErrorResponse } from '../src/models/schemas/user.schema';
+import { test, expect } from '@fixtures/api.fixture';
+import { UserFactory } from '@factories/user.factory';
+import { parseResetPasswordResponse, parseErrorResponse } from '@models/schemas/user.schema';
 
 test.describe('POST /api/v1/users/{id}/reset-password', () => {
 
@@ -140,8 +140,7 @@ test.describe.serial('POST /api/v1/users/{id}/reset-password - E2E Lifecycle', (
     }
   });
 
-  test('Full E2E lifecycle: Create User -> Reset Password -> Verify Login -> Cleanup', { tag: '@e2e' }, async ({ userClient }) => {
-    // 1. Create User
+  test('Step 1: Create User Resource', { tag: '@e2e' }, async ({ userClient }) => {
     initialUserData = UserFactory.buildUserData();
     const createRes = await userClient.createUser(initialUserData);
     if (createRes.status() === 201 || createRes.status() === 200) {
@@ -150,20 +149,24 @@ test.describe.serial('POST /api/v1/users/{id}/reset-password - E2E Lifecycle', (
     } else {
       tempUserId = 'e2e-user-id';
     }
+    expect([200, 201]).toContain(createRes.status());
+  });
 
-    // 2. Reset Password
+  test('Step 2: Reset Password for Created User', { tag: '@e2e' }, async ({ userClient }) => {
     updatedPasswordPayload = UserFactory.buildResetPasswordPayload();
     const resetRes = await userClient.resetPassword(tempUserId, updatedPasswordPayload);
     expect([200, 204]).toContain(resetRes.status());
+  });
 
-    // 3. Login Verification with new password
+  test('Step 3: Verify Login with New Password Credentials', { tag: '@e2e' }, async ({ userClient }) => {
     const loginRes = await userClient.login({
       username: initialUserData.username,
       password: updatedPasswordPayload.newPassword,
     });
     expect([200, 404]).toContain(loginRes.status());
+  });
 
-    // 4. Cleanup Teardown
+  test('Step 4: Delete User Resource Teardown', { tag: '@e2e' }, async ({ userClient }) => {
     if (tempUserId && tempUserId !== 'e2e-user-id') {
       const deleteRes = await userClient.deleteUser(tempUserId);
       expect([200, 204, 404]).toContain(deleteRes.status());
