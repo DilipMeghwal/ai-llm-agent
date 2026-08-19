@@ -522,3 +522,39 @@ npx playwright test --grep @e2e
 - **Collision-Safe Test Data**: Unique fields in factories are suffixed with a worker/run-scoped identifier — no hardcoded unique values that break under parallel or repeated runs.
 - **Transparent Backoff, Never Hedged Assertions**: Rate limits (429/503) are retried with backoff inside the client layer; a test never treats a rate-limit status as an accepted outcome.
 - **Documentation Stays Live**: `docs/test-cases/[domain].test-cases.md` and `docs/contracts.md` are generated/updated alongside code, not maintained separately — and their Status fields are updated by the Healer and Contract Diff Analyzer as reality changes, not left stale.
+
+## 8. Future Plan: Docker & Kubernetes Helm Integration
+
+### High-Value Use Cases for Docker & Kubernetes/Helm
+
+#### 1. Ephemeral Test Environments (Preview Environments per PR)
+- **The Problem**: Testing against a single shared Staging/Dev environment leads to test data collisions, dirty database states, and flaky tests.
+- **The Helm Solution**: Using Helm charts, your CI pipeline can spin up a fresh, isolated instance of your target API microservices + database in Kubernetes for **each Pull Request**, run this Playwright test suite against it, and tear down the Helm release when done.
+- **Flow**:
+  `PR Opened` ➔ `Helm Install (Deploy Microservices to K8s)` ➔ `Run Playwright Tests` ➔ `Helm Uninstall (Teardown)`
+
+#### 2. Testing Internal & Private VPC Microservices
+- **The Problem**: Security policies often prevent public GitHub Actions runners from accessing internal APIs, private databases, or staging clusters behind a VPN/Firewall.
+- **The Helm Solution**: You can deploy self-hosted GitHub Action runners (using **Actions Runner Controller - ARC**) or run Playwright tests directly inside your Kubernetes cluster via **Kubernetes `Jobs` / `CronJobs`** managed via Helm.
+- **Value**: Zero firewall friction, direct cluster DNS resolution (`http://user-service.default.svc.cluster.local`), and secure API execution.
+
+#### 3. Large-Scale Distributed Parallel Execution
+- **The Problem**: When your test suite grows to thousands of tests, running them on a single CI machine becomes a bottleneck.
+- **The K8s/Helm Solution**: You can deploy a K8s Job template via Helm that scales dynamically to **20–50 parallel pods**, each running a Playwright `--shard=x/n` slice. Tests that take 45 minutes serially finish in **under 2 minutes**.
+
+### Evaluation Matrix: When to Use K8s/Helm
+
+| Scenario | Recommended Strategy | Why? |
+|---|---|---|
+| **Current Setup (< 100 API tests, public endpoint)** | **GitHub Actions + Docker Container** *(Current Setup)* | Super fast, 0 infrastructure maintenance, completely free. |
+| **Testing APIs behind private VPN / Corporate Firewall** | **Kubernetes + Helm (Self-hosted Runners / K8s Jobs)** | Necessary for internal network access and security compliance. |
+| **Needs Ephemeral Environments per Pull Request** | **Helm Charts for Microservice Deployment** | Guarantees clean test data per run. |
+| **Large Enterprise Test Suites (1,000+ tests)** | **K8s Parallel Jobs Sharding via Helm** | Infinite horizontal scalability across cluster nodes. |
+
+### Implementation Roadmap & Next Steps
+
+1. **Maintain Current Setup**: Keep the GitHub Actions + Playwright Docker Container setup (`mcr.microsoft.com/playwright:v1.50.0-noble`) for fast CI feedback on staging environments.
+2. **Future Helm Migration**: If expanding to internal microservices or ephemeral environments, create a `helm/` chart directory containing:
+   - `values.yaml`: Dynamic environment configuration (`BASE_URL`, database endpoints, role tokens).
+   - `templates/test-job.yaml`: Kubernetes Job manifest to trigger Playwright test suites on demand inside the cluster.
+
