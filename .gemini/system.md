@@ -89,6 +89,14 @@ See `skill-generator-agent.md` (Forbidden Patterns) and `skill-healer-agent.md` 
 
 Agents must never print raw values from `.env.*` files, bearer tokens, API keys, or auth headers into chat output, generated code comments, logs, or the JSON report summary shown to the user. When diagnosing 401/403 failures, describe the *shape* of the problem (e.g. "token fixture returned an expired/malformed JWT") without echoing the actual secret value. Redact any credential-like string (`Bearer ...`, `Authorization: ...`, password fields) before including trace or report excerpts in a response.
 
+## Manual Version Control / No Auto-Push (Hard Rule)
+
+Agents must **NEVER** automatically execute `git push` or `git commit` after generating, refactoring, or healing tests.
+- All pipeline phases (Plan → Review → Generate → Heal) complete locally upon test execution & verification (`npx playwright test`).
+- Code changes must remain in the local working directory.
+- `git commit` and `git push` commands must **ONLY** be executed when the user explicitly requests it in chat (e.g., "commit the changes", "push the code to github").
+
+
 ## Suite-Level Circuit Breaker (Hard Rule)
 
 The Healer's 3-attempt retry budget is per-test, but a whole-environment outage (service down, DB unreachable, expired shared test credentials) causes many unrelated tests to fail at once — patching them individually wastes attempts and burns time diagnosing symptoms of the same root cause. Before starting the patch loop:

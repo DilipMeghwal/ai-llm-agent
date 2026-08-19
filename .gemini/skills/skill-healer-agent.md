@@ -39,14 +39,22 @@ Before entering the per-test patch loop, check the overall failure rate from the
    npx playwright test <spec-path> -g "<test-title>" --debug
    ```
 
-## Classify the Root Cause
+## Classify the Root Cause (Diagnostic Taxonomy Matrix)
 
-- **Schema mismatch** (AJV validation failed — the domain's `parseX()` threw) → the live response no longer matches `src/models/schemas/[domain].schema.ts`. Read `ajv.errorsText()` output in the thrown error for the exact field/keyword that failed, patch the JSON Schema to reflect reality, regenerate the inferred type (it updates automatically via `FromSchema<>` once the schema changes).
-- **Factory produced invalid data** (400/422 on what should be a happy path) → patch `src/factories/[domain].factory.ts` (e.g., a Faker generator producing an out-of-range or wrong-type value).
-- **Client/route bug** (wrong method, wrong path param interpolation, wrong header) → patch `src/clients/[domain].client.ts` or `src/config/endpoints.ts`.
-- **Fixture/auth issue** (401 on a request that should be authenticated) → patch `src/fixtures/api.fixture.ts` token retrieval/caching logic.
-- **Shared-state/ordering issue** (integration/e2e chain broke because a prior step's ID wasn't passed forward) → patch the `test.describe.serial()` block's state threading, not the individual assertion.
-- **Genuine backend contract break** (not something the test can be fixed around) → do NOT silently loosen assertions. Flag it explicitly in the final report as a contract break requiring `contract-diff-analyzer` / backend team attention.
+Classify the failure into one of the following explicit categories before attempting any patch:
+
+1. **`CATEGORY_INFRASTRUCTURE_DOWN`** (HTTP 5xx, 404 HTML, gateway timeout, socket hangup):
+   - Server or network environment is unavailable. **Action**: Do NOT patch test code; report environment downtime to the user immediately.
+2. **`CATEGORY_CONTRACT_DRIFT`** (AJV schema validation failed — domain `parseX()` threw):
+   - Response payload shape differs from `src/models/schemas/[domain].schema.ts`. Read `ajv.errorsText()` output for the exact mismatch. **Action**: If confirmed backend spec change, patch schema or flag contract drift.
+3. **`CATEGORY_DATA_COLLISION`** (409 Conflict, duplicate key failure):
+   - Factory produced duplicate unique field values. **Action**: Patch `src/factories/[domain].factory.ts` worker-scoped uniqueness suffix.
+4. **`CATEGORY_AUTH_EXPIRED`** (401 Unauthorized / 403 Forbidden on valid authenticated call):
+   - Auth token is missing, expired, or rejected. **Action**: Patch `src/fixtures/api.fixture.ts` token retrieval/caching logic.
+5. **`CATEGORY_CLIENT_ROUTE_BUG`** (Wrong HTTP method, path parameter string interpolation issue):
+   - Client wrapper or endpoint constant contains syntax or path error. **Action**: Patch `src/clients/[domain].client.ts` or `src/config/endpoints.ts`.
+6. **`CATEGORY_STATE_THREADING_BREAK`** (Integration/E2E step failed due to unpassed state):
+   - Shared variable was not passed from preceding step. **Action**: Patch `test.describe.serial()` state scoping.
 
 ## Patch & Re-verify Loop (Bounded)
 
@@ -71,3 +79,4 @@ npx playwright test <spec-path> -g "<test-title>"
 - If you encounter an existing test that already contains one of these forbidden patterns (rather than one you'd be tempted to write), do not "heal" it by leaving the hedge in place — flag it in the summary as needing a real fix, the same as an unresolved failure.
 - Limit each heal cycle to the smallest patch that resolves the diagnosed root cause — do not refactor unrelated code.
 - Never print raw secrets/tokens from the report, trace, or environment while diagnosing or summarizing — see `system.md` Secrets Handling rule.
+- Never run `git commit` or `git push` automatically after healing — keep all patched test code in the local working directory and only perform version control commands when explicitly requested by the user.

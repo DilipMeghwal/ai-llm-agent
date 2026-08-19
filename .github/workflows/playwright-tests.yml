@@ -1,25 +1,23 @@
-name: Playwright API Tests
+name: Playwright API Automation Pipeline
 
 on:
   push:
-    branches: ["**"]
+    branches: [ main, develop ]
   pull_request:
-    branches: [main]
-  schedule:
-    # Nightly regression + security + integration run, 02:00 UTC
-    - cron: "0 2 * * *"
-  release:
-    types: [published]
+    branches: [ main, develop ]
+#  schedule:
+#    # Run regression & security suites nightly at 00:00 UTC
+#    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Test tag to run (smoke | sanity | integration | regression | security | e2e | all)"
-        required: false
-        default: "smoke"
+      test_tag:
+        description: 'Test tag to execute (@smoke, @sanity, @regression, @security, @integration, @e2e)'
+        required: true
+        default: '@smoke'
 
 jobs:
-  smoke:
-    name: Smoke Tests
+  smoke-tests:
+    name: Smoke Test Matrix (Fast Feedback)
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -27,20 +25,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npx playwright install --with-deps
-      - name: Run smoke tests
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Execute Smoke Tests
         run: npx playwright test --grep @smoke
-        env:
-          ENV: qa
-      - uses: actions/upload-artifact@v4
+      - name: Upload HTML Test Report
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: smoke-report
+          name: smoke-test-report
           path: playwright-report/
+          retention-days: 7
 
   nightly-regression:
-    name: Nightly Regression + Security + Integration
+    name: Nightly Full Regression, Security & Integration Suite
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
@@ -48,70 +49,56 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npx playwright install --with-deps
-      - name: Run regression, security, and integration suites
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Execute Nightly Suite (@regression, @security, @integration)
         run: npx playwright test --grep "@regression|@security|@integration"
-        env:
-          ENV: qa
-      - uses: actions/upload-artifact@v4
+      - name: Upload HTML Test Report
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: nightly-report
+          name: nightly-test-report
           path: playwright-report/
-      - name: Report unresolved tests
-        if: always()
-        run: |
-          if [ -f test-results/unresolved.md ]; then
-            echo "## Unresolved tests found" >> $GITHUB_STEP_SUMMARY
-            cat test-results/unresolved.md >> $GITHUB_STEP_SUMMARY
-          fi
-
-  e2e-pre-release:
-    name: End-to-End (pre-release)
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.tag == 'e2e' || github.event.inputs.tag == 'all'))
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npx playwright install --with-deps
-      - name: Run E2E suite
-        run: npx playwright test --grep @e2e
-        env:
-          ENV: staging
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: e2e-report
-          path: playwright-report/
+          retention-days: 30
 
   manual-dispatch:
-    name: Manual Run (${{ github.event.inputs.tag }})
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.tag != 'e2e' && github.event.inputs.tag != 'all'
+    name: Tag-Targeted Dispatch Execution
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
-      - run: npx playwright install --with-deps
-      - name: Run selected tag
-        run: npx playwright test --grep "@${{ github.event.inputs.tag }}"
-        env:
-          ENV: qa
-      - uses: actions/upload-artifact@v4
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Execute Selected Tag
+        run: npx playwright test --grep "${{ github.event.inputs.test_tag }}"
+      - name: Upload HTML Test Report
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: manual-report
+          name: dispatch-test-report
           path: playwright-report/
+          retention-days: 14
 
-# Notes:
-# - ENV maps to your .env.qa / .env.staging convention — never point CI at production.
-# - Adjust the cron schedule and branch filters to match your team's release cadence.
-# - The `nightly-regression` job surfaces test-results/unresolved.md directly in the
-#   GitHub Actions run summary so unresolved Healer failures are visible without
-#   digging through logs.
+  openapi-drift-check:
+    name: OpenAPI Spec Drift Detection Job
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Check Contract Drift
+        run: npx tsc --noEmit

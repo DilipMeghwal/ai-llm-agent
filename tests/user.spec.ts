@@ -1,10 +1,11 @@
 import { test, expect } from '@fixtures/api.fixture';
 import { UserFactory } from '@factories/user.factory';
 import { parseResetPasswordResponse, parseErrorResponse } from '@models/schemas/user.schema';
+import { TeardownManager } from '../src/utils/teardown-manager';
 
 test.describe('POST /api/v1/users/{id}/reset-password', () => {
 
-  test('should reset password successfully for valid user', { tag: '@smoke' }, async ({ userClient }) => {
+  test('should reset password successfully for valid user', { tag: '@smoke' }, async ({ userClient, attachApiResponse }) => {
     const userId = 'user-123';
     const payload = UserFactory.buildResetPasswordPayload();
 
@@ -18,6 +19,9 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
       expect(response.headers()['content-type']).toContain('application/json');
       const body = await response.json();
 
+      // Report attachment
+      attachApiResponse('Reset Password Response', body);
+
       // 3. Schema Contract Validation
       parseResetPasswordResponse(body);
 
@@ -28,7 +32,7 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
     }
   });
 
-  test('should verify endpoint sanity check for password reset', { tag: '@sanity' }, async ({ userClient }) => {
+  test('should verify endpoint sanity check for password reset', { tag: '@sanity' }, async ({ userClient, attachApiResponse }) => {
     const userId = 'user-123';
     const payload = UserFactory.buildResetPasswordPayload();
 
@@ -37,11 +41,12 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
     expect([200, 204]).toContain(response.status());
     if (response.status() === 200) {
       const body = await response.json();
+      attachApiResponse('Sanity Check Response', body);
       parseResetPasswordResponse(body);
     }
   });
 
-  test('should return 400/422 when newPassword field is missing', { tag: '@regression' }, async ({ userClient }) => {
+  test('should return 400/422 when newPassword field is missing', { tag: '@regression' }, async ({ userClient, attachApiResponse }) => {
     const userId = 'user-123';
     const invalidPayload = {} as any;
 
@@ -49,6 +54,7 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
     
     expect([400, 422]).toContain(response.status());
     const body = await response.json();
+    attachApiResponse('Error Response (Missing Field)', body);
     
     parseErrorResponse(body);
     
@@ -57,7 +63,7 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
     expect(errorText).toMatch(/password|required|field/i);
   });
 
-  test('should return 400/422 when newPassword is empty', { tag: '@regression' }, async ({ userClient }) => {
+  test('should return 400/422 when newPassword is empty', { tag: '@regression' }, async ({ userClient, attachApiResponse }) => {
     const userId = 'user-123';
     const invalidPayload = UserFactory.buildEmptyPasswordPayload();
 
@@ -65,12 +71,13 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
     
     expect([400, 422]).toContain(response.status());
     const body = await response.json();
+    attachApiResponse('Error Response (Empty Field)', body);
     
     parseErrorResponse(body);
     expect(JSON.stringify(body).length).toBeGreaterThan(0);
   });
 
-  test('should return 404 when user ID does not exist', { tag: '@regression' }, async ({ userClient }) => {
+  test('should return 404 when user ID does not exist', { tag: '@regression' }, async ({ userClient, attachApiResponse }) => {
     const nonExistentUserId = '99999999-9999-9999-9999-999999999999';
     const payload = UserFactory.buildResetPasswordPayload();
 
@@ -78,13 +85,14 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
     
     expect(response.status()).toBe(404);
     const body = await response.json();
+    attachApiResponse('Error Response (Not Found)', body);
     
     parseErrorResponse(body);
     const errorText = JSON.stringify(body).toLowerCase();
     expect(errorText).toMatch(/not found|user|exist/i);
   });
 
-  test('should return 401 when request is unauthenticated', { tag: '@regression' }, async ({ unauthClient }) => {
+  test('should return 401 when request is unauthenticated', { tag: '@regression' }, async ({ unauthClient, attachApiResponse }) => {
     const userId = 'user-123';
     const payload = UserFactory.buildResetPasswordPayload();
 
@@ -92,6 +100,7 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
     
     expect([401, 403]).toContain(response.status());
     const body = await response.json();
+    attachApiResponse('Error Response (Unauth)', body);
     
     parseErrorResponse(body);
   });
@@ -99,7 +108,7 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
 });
 
 test.describe('POST /api/v1/users/{id}/reset-password - Integration Flow', () => {
-  test('User reset password and authentication integration flow', { tag: '@integration' }, async ({ userClient }) => {
+  test('User reset password and authentication integration flow', { tag: '@integration' }, async ({ userClient, attachApiResponse }) => {
     let createdUserId: string;
     let newPassword: string;
     let userData: ReturnType<typeof UserFactory.buildUserData>;
@@ -111,6 +120,11 @@ test.describe('POST /api/v1/users/{id}/reset-password - Integration Flow', () =>
         const payload = UserFactory.buildResetPasswordPayload();
         newPassword = payload.newPassword!;
 
+        // Register teardown task
+        TeardownManager.register(async () => {
+          await userClient.deleteUser(createdUserId).catch(() => {});
+        });
+
         const response = await userClient.resetPassword(createdUserId, payload);
         expect([200, 204]).toContain(response.status());
       });
@@ -121,18 +135,20 @@ test.describe('POST /api/v1/users/{id}/reset-password - Integration Flow', () =>
           password: newPassword,
         });
         
+        if (loginResponse.status() === 200) {
+          const body = await loginResponse.json();
+          attachApiResponse('Integration Login Response', body);
+        }
         expect([200, 404]).toContain(loginResponse.status());
       });
     } finally {
-      if (createdUserId!) {
-        await userClient.deleteUser(createdUserId).catch(() => {});
-      }
+      await TeardownManager.executeAll();
     }
   });
 });
 
 test.describe('POST /api/v1/users/{id}/reset-password - E2E Lifecycle', () => {
-  test('Full E2E user lifecycle with credential update and teardown', { tag: '@e2e' }, async ({ userClient }) => {
+  test('Full E2E user lifecycle with credential update and teardown', { tag: '@e2e' }, async ({ userClient, attachApiResponse }) => {
     let tempUserId: string;
     let initialUserData: ReturnType<typeof UserFactory.buildUserData>;
     let updatedPasswordPayload: ReturnType<typeof UserFactory.buildResetPasswordPayload>;
@@ -144,6 +160,13 @@ test.describe('POST /api/v1/users/{id}/reset-password - E2E Lifecycle', () => {
         if (createRes.status() === 201 || createRes.status() === 200) {
           const createBody = await createRes.json();
           tempUserId = createBody.id || 'e2e-user-id';
+          attachApiResponse('E2E Create User Response', createBody);
+
+          TeardownManager.register(async () => {
+            if (tempUserId && tempUserId !== 'e2e-user-id') {
+              await userClient.deleteUser(tempUserId).catch(() => {});
+            }
+          });
         } else {
           tempUserId = 'e2e-user-id';
         }
@@ -161,12 +184,14 @@ test.describe('POST /api/v1/users/{id}/reset-password - E2E Lifecycle', () => {
           username: initialUserData.username,
           password: updatedPasswordPayload.newPassword,
         });
+        if (loginRes.status() === 200) {
+          const body = await loginRes.json();
+          attachApiResponse('E2E Login Response', body);
+        }
         expect([200, 404]).toContain(loginRes.status());
       });
     } finally {
-      if (tempUserId! && tempUserId !== 'e2e-user-id') {
-        await userClient.deleteUser(tempUserId).catch(() => {});
-      }
+      await TeardownManager.executeAll();
     }
   });
 });

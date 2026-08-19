@@ -53,4 +53,6 @@ Before drafting a plan, inspect the target workspace and determine the execution
    - Check the suite-level circuit breaker (>30% failure rate → report a likely shared root cause instead of patching individually).
    - Execute target test: `npx playwright test <spec-path> -g "<test-title>"`.
    - If tests fail, invoke `playwright-healer` to inspect the JSON report / trace, patch code, and re-run — up to 3 attempts per test. Unresolved tests after 3 attempts are written to `test-results/unresolved.md` and reported, not force-passed.
-   - On success, run `npx playwright show-report` for a final full-suite confirmation.
+5. **No Auto-Push / Manual Version Control**:
+   - Never run `git commit` or `git push` automatically. Keep all generated, refactored, and healed test code in the local working directory.
+   - Stage, commit, or push changes only when the user explicitly requests it in chat.

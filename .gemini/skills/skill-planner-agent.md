@@ -42,18 +42,25 @@ List the applicable categories per test case in the plan (see Output Format belo
 
 ## Output Format (Text Plan for Review)
 
+## Output Format (Text Plan for Review)
+
 Before any code is written, output the plan as a plain-text/markdown table — do NOT generate files yet. Example:
 
 ```
 ## Proposed Test Plan — [domain] (mode: FULL_SUITE)
 
-| # | Type | Endpoint(s) | Description | Assertions | Expected Result |
-|---|------|-------------|--------------|------------|------------------|
-| 1 | smoke | POST /auth/login | Valid credentials login | status, schema, field-value (token is non-empty JWT) | 200 + valid token |
-| 2 | regression | POST /users | Missing required "email" field | status, error-body (message mentions "email") | 422 + specific validation error |
-| 3 | regression | POST /users | Valid payload creates user | status, schema, field-value (response echoes submitted name/email), header (Location points to new resource) | 201 + full echoed user object |
-| 4 | integration | POST /users → GET /users/:id → DELETE /users/:id | Full lifecycle with shared user ID | status+schema each step, field-value (GET returns same data POST created), status 404 confirms delete took effect | Each step 2xx, final GET returns 404 |
-| 5 | e2e | POST /auth/login → POST /orders → GET /orders/:id → POST /orders/:id/pay | New user places and pays for an order | status+schema each step, business-rule (order total = sum of line items), field-value (final status field = "paid") | Final status = "paid" |
+| # | Type | Endpoint(s) | Description | Data Prerequisites | Assertions | Expected Result |
+|---|------|-------------|--------------|--------------------|------------|------------------|
+| 1 | smoke | POST /auth/login | Valid credentials login | Valid Admin User | status, schema, field-value (token is non-empty JWT) | 200 + valid token |
+| 2 | regression | POST /users | Missing required "email" field | Unauthenticated Context | status, error-body (message mentions "email") | 422 + specific validation error |
+| 3 | regression | POST /users | Valid payload creates user | Admin Token | status, schema, field-value (response echoes submitted name/email), header (Location) | 201 + full echoed user object |
+| 4 | integration | POST /users → GET /users/:id → DELETE /users/:id | Full lifecycle with shared user ID | Dynamic Worker-scoped Payload | status+schema each step, field-value (GET matches POST), 404 confirms delete | Each step 2xx, final GET 404 |
+| 5 | e2e | POST /auth/login → POST /orders → GET /orders/:id → POST /orders/:id/pay | New user places and pays for order | Unregistered User Credentials | status+schema each step, business-rule, field-value | Final status = "paid" |
+
+### Coverage & Risk Matrix Analysis:
+- **Security Check**: Verified auth boundaries (401) and IDOR access isolation.
+- **Negative Matrix**: Verified missing fields (400/422) and non-existent IDs (404).
+- **Data Safety**: All integration/e2e entities registered with teardown cleanup.
 
 Total: X smoke, Y sanity, Z integration, W regression, U security, V e2e (N test cases)
 
