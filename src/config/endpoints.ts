@@ -8,4 +8,8 @@ export const ENDPOINTS = {
     LOGIN: '/api/v1/auth/login',
     REGISTER: '/api/v1/auth/register',
   },
+  MISC: {
+    LOGIN: (username: string, password: string) =>
+      `/login/${encodeURIComponent(username)}/${encodeURIComponent(password)}`,
+  },
 } as const;

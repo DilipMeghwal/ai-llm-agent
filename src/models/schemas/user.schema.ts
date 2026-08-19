@@ -1,4 +1,4 @@
-import { sharedAjv } from './index';
+import { sharedAjv } from './ajv';
 
 export const resetPasswordRequestSchema = {
   type: 'object',
