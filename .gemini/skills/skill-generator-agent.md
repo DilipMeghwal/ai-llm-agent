@@ -103,8 +103,7 @@ export function parseUser(data: unknown): User {
   - For error cases, assert the error body content (code/message), not just the status number — e.g. `expect(response.body.errors).toContainEqual(expect.objectContaining({ field: 'email' }))`, not just `expect(status).toBe(422)`.
   - For business-rule cases, assert the rule directly (e.g. uniqueness by attempting a duplicate and expecting a conflict; a computed total by checking the arithmetic).
   - For pagination/list endpoints, assert the returned items actually respect the requested page/sort/filter — not just that an array came back.
-- **Tag every test** with its approved type: `test('description', { tag: '@smoke' }, async ({ userClient }) => { ... })`.
-- **Thread shared state for integration/e2e flows**: use `test.describe.serial('...', () => { ... })` with a module-scoped variable (e.g. `let createdUserId: string`) so dependent steps (create → read → update → delete) run in order and share IDs. Never write independent/parallel tests for steps the Planner flagged as dependent.
+- **Thread shared state & explicit test steps for integration/e2e flows**: use `test.describe.serial('...', () => { ... })` with module-scoped variables (e.g. `let createdUserId: string`). Every step in an `@integration` or `@e2e` chain must be defined as an explicit, numbered Playwright `test('Step X: <action description>', { tag: '@integration' }, async () => { ... })` block, asserting its own HTTP status, schema contract, field values, and state propagation before moving to the next step. Teardown/cleanup must be explicitly registered in an `afterAll` hook or final step. Never write independent/parallel tests for steps the Planner flagged as dependent.
 
 ### 7. Human-Readable Test Case Doc (`docs/test-cases/[domain].test-cases.md`)
 

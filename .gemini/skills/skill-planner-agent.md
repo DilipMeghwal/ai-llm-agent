@@ -19,10 +19,10 @@ description: Analyzes API specs, maps dependencies, and drafts a test-case PLAN 
 
    - **Smoke** (`@smoke`): One happy-path call for each core/critical endpoint only. Keep this list short by design.
    - **Sanity** (`@sanity`): Narrow checks for the specific endpoint(s) actually in scope for this run (relevant for `INCREMENTAL_DIFF` / `SCHEMA_SYNC` modes especially).
-   - **Integration** (`@integration`): Multi-step flows that chain dependent endpoints together (the DAG from step 1), verifying data flows correctly across calls.
+   - **Integration** (`@integration`): Multi-step flows that chain dependent endpoints together (the DAG from step 1), verifying data flows correctly across calls. **Requirement**: Must explicitly define numbered test steps (e.g., Step 1: Create entity → Step 2: Retrieve & verify entity → Step 3: Update entity → Step 4: Delete & confirm 404), specifying passed state (IDs/tokens) and per-step assertion checkpoints.
    - **Regression** (`@regression`): The full per-endpoint matrix — happy path, negative/validation (400/422), not-found/conflict (404/409).
    - **Security** (`@security`): Auth boundaries (401/403), JWT tampering (expired/malformed/wrong-signature tokens), IDOR checks (user A attempting to access user B's resource by ID), basic injection payloads in string fields, CORS/security-header checks. Keep separate from `@regression` so it can be scheduled/reviewed independently.
-   - **E2E** (`@e2e`): A realistic end-to-end user journey spanning multiple domains, only where the spec supports a coherent journey (e.g. signup → login → create resource → use it → clean up).
+   - **E2E** (`@e2e`): A realistic end-to-end user journey spanning multiple domains, only where the spec supports a coherent journey (e.g. signup → login → create resource → use it → clean up). **Requirement**: Must outline explicit multi-domain step breakdown with actions, prerequisites, state transitions, and per-step acceptance criteria.
 
 ## Assertion Scope (per test case — not status/schema alone)
 
