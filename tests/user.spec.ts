@@ -98,78 +98,75 @@ test.describe('POST /api/v1/users/{id}/reset-password', () => {
 
 });
 
-test.describe.serial('POST /api/v1/users/{id}/reset-password - Integration Flow', () => {
-  let createdUserId: string;
-  let newPassword: string;
-  let userData: ReturnType<typeof UserFactory.buildUserData>;
+test.describe('POST /api/v1/users/{id}/reset-password - Integration Flow', () => {
+  test('User reset password and authentication integration flow', { tag: '@integration' }, async ({ userClient }) => {
+    let createdUserId: string;
+    let newPassword: string;
+    let userData: ReturnType<typeof UserFactory.buildUserData>;
 
-  test.afterAll(async ({ userClient }) => {
-    if (createdUserId) {
-      await userClient.deleteUser(createdUserId).catch(() => {});
+    try {
+      await test.step('1. Reset password for existing user', async () => {
+        userData = UserFactory.buildUserData();
+        createdUserId = userData.username;
+        const payload = UserFactory.buildResetPasswordPayload();
+        newPassword = payload.newPassword!;
+
+        const response = await userClient.resetPassword(createdUserId, payload);
+        expect([200, 204]).toContain(response.status());
+      });
+
+      await test.step('2. Authenticate using newly reset password', async () => {
+        const loginResponse = await userClient.login({
+          email: userData.email,
+          password: newPassword,
+        });
+        
+        expect([200, 404]).toContain(loginResponse.status());
+      });
+    } finally {
+      if (createdUserId!) {
+        await userClient.deleteUser(createdUserId).catch(() => {});
+      }
     }
-  });
-
-  test('Step 1: Reset password for existing user', { tag: '@integration' }, async ({ userClient }) => {
-    userData = UserFactory.buildUserData();
-    createdUserId = userData.username;
-    const payload = UserFactory.buildResetPasswordPayload();
-    newPassword = payload.newPassword!;
-
-    const response = await userClient.resetPassword(createdUserId, payload);
-    expect([200, 204]).toContain(response.status());
-  });
-
-  test('Step 2: Authenticate using newly reset password', { tag: '@integration' }, async ({ userClient }) => {
-    const loginResponse = await userClient.login({
-      email: userData.email,
-      password: newPassword,
-    });
-    
-    expect([200, 404]).toContain(loginResponse.status());
   });
 });
 
-test.describe.serial('POST /api/v1/users/{id}/reset-password - E2E Lifecycle', () => {
-  let tempUserId: string;
-  let initialUserData: ReturnType<typeof UserFactory.buildUserData>;
-  let updatedPasswordPayload: ReturnType<typeof UserFactory.buildResetPasswordPayload>;
+test.describe('POST /api/v1/users/{id}/reset-password - E2E Lifecycle', () => {
+  test('Full E2E user lifecycle with credential update and teardown', { tag: '@e2e' }, async ({ userClient }) => {
+    let tempUserId: string;
+    let initialUserData: ReturnType<typeof UserFactory.buildUserData>;
+    let updatedPasswordPayload: ReturnType<typeof UserFactory.buildResetPasswordPayload>;
 
-  test.afterAll(async ({ userClient }) => {
-    if (tempUserId) {
-      await userClient.deleteUser(tempUserId).catch(() => {});
-    }
-  });
+    try {
+      await test.step('1. Create user resource', async () => {
+        initialUserData = UserFactory.buildUserData();
+        const createRes = await userClient.createUser(initialUserData);
+        if (createRes.status() === 201 || createRes.status() === 200) {
+          const createBody = await createRes.json();
+          tempUserId = createBody.id || 'e2e-user-id';
+        } else {
+          tempUserId = 'e2e-user-id';
+        }
+        expect([200, 201]).toContain(createRes.status());
+      });
 
-  test('Step 1: Create User Resource', { tag: '@e2e' }, async ({ userClient }) => {
-    initialUserData = UserFactory.buildUserData();
-    const createRes = await userClient.createUser(initialUserData);
-    if (createRes.status() === 201 || createRes.status() === 200) {
-      const createBody = await createRes.json();
-      tempUserId = createBody.id || 'e2e-user-id';
-    } else {
-      tempUserId = 'e2e-user-id';
-    }
-    expect([200, 201]).toContain(createRes.status());
-  });
+      await test.step('2. Reset password for created user', async () => {
+        updatedPasswordPayload = UserFactory.buildResetPasswordPayload();
+        const resetRes = await userClient.resetPassword(tempUserId, updatedPasswordPayload);
+        expect([200, 204]).toContain(resetRes.status());
+      });
 
-  test('Step 2: Reset Password for Created User', { tag: '@e2e' }, async ({ userClient }) => {
-    updatedPasswordPayload = UserFactory.buildResetPasswordPayload();
-    const resetRes = await userClient.resetPassword(tempUserId, updatedPasswordPayload);
-    expect([200, 204]).toContain(resetRes.status());
-  });
-
-  test('Step 3: Verify Login with New Password Credentials', { tag: '@e2e' }, async ({ userClient }) => {
-    const loginRes = await userClient.login({
-      username: initialUserData.username,
-      password: updatedPasswordPayload.newPassword,
-    });
-    expect([200, 404]).toContain(loginRes.status());
-  });
-
-  test('Step 4: Delete User Resource Teardown', { tag: '@e2e' }, async ({ userClient }) => {
-    if (tempUserId && tempUserId !== 'e2e-user-id') {
-      const deleteRes = await userClient.deleteUser(tempUserId);
-      expect([200, 204, 404]).toContain(deleteRes.status());
+      await test.step('3. Verify login with updated credentials', async () => {
+        const loginRes = await userClient.login({
+          username: initialUserData.username,
+          password: updatedPasswordPayload.newPassword,
+        });
+        expect([200, 404]).toContain(loginRes.status());
+      });
+    } finally {
+      if (tempUserId! && tempUserId !== 'e2e-user-id') {
+        await userClient.deleteUser(tempUserId).catch(() => {});
+      }
     }
   });
 });
