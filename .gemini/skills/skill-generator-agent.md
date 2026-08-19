@@ -106,7 +106,14 @@ export function parseUser(data: unknown): User {
 
 ### 7. Human-Readable Test Case Doc (`docs/test-cases/[domain].test-cases.md`)
 
-For every `src/tests/[domain].spec.ts` generated or appended, produce/update a companion Jira-style test case document at `docs/test-cases/[domain].test-cases.md`. This is for humans (QA leads, product, auditors) who won't read the TypeScript — it must stand alone. One entry per approved plan row, in this format:
+For every `tests/[domain].spec.ts` generated or appended, produce/update a companion Jira-style test case document at `docs/test-cases/[domain].test-cases.md`. This document must be **framework-agnostic, generic, and readable by everyone** (QA leads, product managers, business analysts, auditors).
+
+**Hard Rules for Test Case Documentation**:
+- **No Code Implementation Coupling**: Do NOT include code variable names, class names, client fixture names (`userClient`, `adminUserClient`), code helper/factory names (`buildUser()`), or test runner constructs (`describe.serial()`, `test.step()`).
+- **Generic Preconditions & Test Data**: State preconditions and test data in plain business/API terms (e.g. "Authenticated user with admin authorization", "Valid User Registration Payload").
+- **Clean Business Actions**: Step actions and expected results must describe business-level API calls without code snippets.
+
+One entry per approved plan row, in this format:
 
 ```markdown
 ## TC-003: Full user lifecycle via API
@@ -120,24 +127,24 @@ For every `src/tests/[domain].spec.ts` generated or appended, produce/update a c
 **So that** the full resource lifecycle behaves consistently and leaves no orphaned data
 
 **Preconditions:**
-- A valid admin auth token is available via the `adminUserClient` fixture
+- Authenticated user with administrative privileges
 
 **Test Steps:**
 | Step | Action | Expected Result |
 |---|---|---|
-| 1 | POST /users with a valid, unique payload | 201 Created; response echoes submitted name/email; `Location` header present |
-| 2 | GET /users/:id using the ID from step 1 | 200 OK; response matches what was created |
-| 3 | DELETE /users/:id | 204 No Content |
-| 4 | GET /users/:id again | 404 Not Found — confirms deletion took effect |
+| 1 | Send a `POST` request to `/users` with a valid, unique payload | HTTP `201 Created` status returned with created User ID |
+| 2 | Send a `GET` request to `/users/{id}` using the created User ID | HTTP `200 OK` status returned with matching user details |
+| 3 | Send a `DELETE` request to `/users/{id}` | HTTP `204 No Content` status returned |
+| 4 | Send a `GET` request to `/users/{id}` again | HTTP `404 Not Found` status returned, confirming deletion |
 
-**Test Data:** Generated via `buildUser()` factory (unique email/username per run)
+**Test Data:** Valid User Details (Unique Username/Email)
 
 **Acceptance Criteria:**
-- [ ] Each step returns the exact expected status (no accepted-range hedging)
-- [ ] Step 2's response field values match step 1's submitted values exactly
-- [ ] Step 4 confirms no orphaned data remains after the test
+- [ ] Each step returns the exact designated HTTP status code
+- [ ] Retrospective GET response fields match submitted creation fields
+- [ ] Resource is deleted upon completion to prevent orphaned test data
 
-**Automation Reference:** `src/tests/user.spec.ts` → `describe.serial('User lifecycle')` (`@integration`)
+**Automation Reference:** `tests/user.spec.ts` (`@integration`)
 **Status:** ✅ Automated
 ```
 

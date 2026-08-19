@@ -1,7 +1,5 @@
 # Test Cases — Accounts API
 
-> Companion doc to `src/tests/accounts.spec.ts`. Auto-generated/updated by `playwright-generator` from the approved Planner test plan; kept in sync by `playwright-healer` (Status field) and `contract-diff-analyzer` (flags on contract changes). Do not hand-edit the Automation Reference lines — they must match the actual test titles for traceability.
-
 ---
 
 ## TC-001: Successful deposit into an active account
@@ -10,29 +8,29 @@
 **Epic:** Account Balance Management
 **Type:** 🔥 Smoke | **Priority:** P0
 
-**As a** account holder
+**As an** account holder
 **I want** to deposit funds into my account
 **So that** my available balance increases by the deposited amount
 
 **Preconditions:**
-- An active account exists with a known starting balance (via `userClient` fixture, seeded by `buildAccount()` factory)
+- An active user account exists with a known starting balance
+- User is authenticated with valid authorization credentials
 
 **Test Steps:**
 | Step | Action | Expected Result |
 |---|---|---|
-| 1 | `POST /accounts/{id}/deposit` with `{ amount: 100 }` | `200 OK` |
-| 2 | Inspect response body | `newBalance` equals `startingBalance + 100` exactly |
-| 3 | `GET /accounts/{id}` | Returned `balance` matches the deposit response's `newBalance` |
+| 1 | Send a `POST` request to deposit a positive amount into the account | HTTP `200 OK` status is returned |
+| 2 | Verify the response payload | The returned balance equals the initial balance plus the deposited amount |
+| 3 | Retrieve account details via `GET` request | Account balance matches the updated balance from Step 2 |
 
-**Test Data:** `amount: 100` (positive integer, well within account limits)
+**Test Data:** Deposit Amount: `100.00`
 
 **Acceptance Criteria:**
-- [ ] Response status is exactly `200` (not a range)
-- [ ] Response matches the `DepositResponse` JSON Schema
-- [ ] `newBalance` is arithmetically correct, not just present
-- [ ] Follow-up `GET` confirms the balance persisted
+- [ ] Response returns HTTP `200 OK` status
+- [ ] Account balance is updated arithmetically by the exact deposit amount
+- [ ] Account state remains consistent on subsequent retrieval
 
-**Automation Reference:** `src/tests/accounts.spec.ts` → `POST /deposit - should deposit funds and increase balance by exact amount` (`@smoke`)
+**Automation Reference:** `tests/accounts.spec.ts` (`@smoke`)
 **Status:** ✅ Automated
 
 ---
@@ -45,123 +43,125 @@
 
 **As an** API consumer
 **I want** the API to reject a negative deposit amount
-**So that** account balances can never be corrupted by invalid input
+**So that** account balances cannot be corrupted by invalid input
 
 **Preconditions:**
-- An active account exists
+- An active user account exists
+- User is authenticated with valid authorization credentials
 
 **Test Steps:**
 | Step | Action | Expected Result |
 |---|---|---|
-| 1 | `POST /accounts/{id}/deposit` with `{ amount: -50 }` | `422 Unprocessable Entity` |
-| 2 | Inspect error body | Error array contains an entry for field `amount` mentioning it must be positive |
-| 3 | `GET /accounts/{id}` | Balance is unchanged from before step 1 |
+| 1 | Send a `POST` request to deposit a negative amount into the account | HTTP `422 Unprocessable Entity` status is returned |
+| 2 | Inspect the error response payload | Error message explicitly identifies the invalid amount field |
+| 3 | Retrieve account details via `GET` request | Account balance remains unchanged |
 
-**Test Data:** `amount: -50`
+**Test Data:** Invalid Deposit Amount: `-50.00`
 
 **Acceptance Criteria:**
-- [ ] Status is exactly `422`, not a hedged range
-- [ ] Error message specifically references the `amount` field
-- [ ] Balance is provably unchanged (not just "no error thrown")
+- [ ] Response returns HTTP `422 Unprocessable Entity` status
+- [ ] Error message specifically references the invalid input field
+- [ ] Account balance is unchanged
 
-**Automation Reference:** `src/tests/accounts.spec.ts` → `POST /deposit - should reject negative amount with field-specific error` (`@regression`)
+**Automation Reference:** `tests/accounts.spec.ts` (`@regression`)
 **Status:** ✅ Automated
 
 ---
 
-## TC-003: Deposit → balance check → withdrawal lifecycle
+## TC-003: Deposit and withdrawal account lifecycle
 
 **Jira Story:** ACC-110
 **Epic:** Account Balance Management
 **Type:** 🔗 Integration | **Priority:** P1
 
 **As a** backend service consumer
-**I want** deposit and withdrawal to correctly compose against the same account
-**So that** the balance is always consistent across sequential operations
+**I want** deposit and withdrawal operations to compose correctly on the same account
+**So that** account balances remain consistent across sequential transactions
 
 **Preconditions:**
-- A freshly created account with a `0` starting balance (created within this test, not shared)
+- User is authenticated with valid authorization credentials
 
 **Test Steps:**
 | Step | Action | Expected Result |
 |---|---|---|
-| 1 | `POST /accounts` (create account) | `201 Created`; account ID captured for later steps |
-| 2 | `POST /accounts/{id}/deposit` with `{ amount: 200 }` | `200 OK`; `newBalance = 200` |
-| 3 | `POST /accounts/{id}/withdraw` with `{ amount: 75 }` | `200 OK`; `newBalance = 125` |
-| 4 | `GET /accounts/{id}` | `balance = 125`, matching the last operation exactly |
-| 5 | `DELETE /accounts/{id}` (cleanup) | `204 No Content` |
+| 1 | Send a `POST` request to create a new account | HTTP `201 Created` status is returned and Account ID is captured |
+| 2 | Send a `POST` request to deposit funds into the account | HTTP `200 OK` status is returned and balance increases |
+| 3 | Send a `POST` request to withdraw a partial amount from the account | HTTP `200 OK` status is returned and balance decreases accordingly |
+| 4 | Retrieve account details via `GET` request | Account balance matches the net calculated total |
+| 5 | Send a `DELETE` request to clean up the account | HTTP `204 No Content` status is returned |
 
-**Test Data:** Deposit `200`, withdraw `75` — expect final balance `125`
+**Test Data:** Initial Deposit: `200.00`, Withdrawal: `75.00`, Expected Final Balance: `125.00`
 
 **Acceptance Criteria:**
-- [ ] Steps run in strict order via `test.describe.serial()` sharing the created account ID
-- [ ] Balance arithmetic is correct at every step, not just status codes
-- [ ] Account is deleted at the end — no orphaned test data left behind
+- [ ] Every transaction step completes with its designated success status code
+- [ ] Account balance updates correctly across sequential operations
+- [ ] Created test account is deleted upon test completion
 
-**Automation Reference:** `src/tests/accounts.spec.ts` → `describe.serial('Deposit → withdraw lifecycle')` (`@integration`)
+**Automation Reference:** `tests/accounts.spec.ts` (`@integration`)
 **Status:** ✅ Automated
 
 ---
 
-## TC-004: User cannot deposit into another user's account (IDOR)
+## TC-004: Unauthorized deposit attempt on another user's account (IDOR)
 
 **Jira Story:** ACC-115
 **Epic:** Account Security
 **Type:** 🛡️ Security | **Priority:** P0
 
 **As a** platform operator
-**I want** to prevent one user from modifying another user's account
-**So that** account balances can't be tampered with by unauthorized users
+**I want** to prevent users from modifying accounts owned by other users
+**So that** account balances cannot be tampered with by unauthorized parties
 
 **Preconditions:**
 - Account A exists, owned by User A
-- User B has a valid, separately-authenticated session (via `userClient` fixture with a second identity)
+- User B is authenticated with distinct user credentials
 
 **Test Steps:**
 | Step | Action | Expected Result |
 |---|---|---|
-| 1 | User B calls `POST /accounts/{accountA_id}/deposit` with `{ amount: 100 }` | `403 Forbidden` (per documented API behavior) |
-| 2 | User A calls `GET /accounts/{accountA_id}` | Balance is unchanged — confirms the attempted deposit had no effect |
+| 1 | User B sends a `POST` deposit request targeting Account A | HTTP `403 Forbidden` status is returned |
+| 2 | User A retrieves account details via `GET` request | Account A balance remains unchanged |
 
-**Test Data:** Two distinct authenticated identities (User A owner, User B attacker)
+**Test Data:** Target Account: Account A ID, Acting User: User B Credentials
 
 **Acceptance Criteria:**
-- [ ] Status is exactly `403`, matching documented IDOR-prevention behavior
-- [ ] Account A's balance is provably unaffected by the attempted cross-user deposit
+- [ ] Response returns HTTP `403 Forbidden` status
+- [ ] Target account balance is provably unaffected by the unauthorized request
 
-**Automation Reference:** `src/tests/accounts.spec.ts` → `POST /deposit - should reject deposit attempt from non-owner (IDOR)` (`@security`)
+**Automation Reference:** `tests/accounts.spec.ts` (`@security`)
 **Status:** ✅ Automated
 
 ---
 
-## TC-005: New user opens account, deposits, and views transaction history
+## TC-005: New user account onboarding and transaction history
 
 **Jira Story:** ACC-201
-**Epic:** New Customer Onboarding
+**Epic:** Customer Onboarding
 **Type:** 🧭 E2E | **Priority:** P2
 
 **As a** new customer
-**I want** to sign up, open an account, deposit funds, and see my transaction reflected
-**So that** the full onboarding-to-first-transaction journey works end to end
+**I want** to register an account, open a bank account, make a deposit, and view transaction history
+**So that** the full onboarding journey works seamlessly end to end
 
-**Preconditions:** None — this test creates its own user from scratch
+**Preconditions:**
+- Unregistered user credentials
 
 **Test Steps:**
 | Step | Action | Expected Result |
 |---|---|---|
-| 1 | `POST /auth/register` with new user details | `201 Created`; JWT returned |
-| 2 | `POST /accounts` (using the new token) | `201 Created`; account ID captured |
-| 3 | `POST /accounts/{id}/deposit` with `{ amount: 500 }` | `200 OK`; `newBalance = 500` |
-| 4 | `GET /accounts/{id}/transactions` | Returned list includes exactly one transaction of type `deposit`, amount `500` |
+| 1 | Send a `POST` request to register a new user | HTTP `201 Created` status and auth credentials returned |
+| 2 | Send a `POST` request to open a new bank account | HTTP `201 Created` status and Account ID returned |
+| 3 | Send a `POST` request to deposit funds into the new account | HTTP `200 OK` status returned with updated balance |
+| 4 | Send a `GET` request to view account transaction history | Returned list contains the deposit transaction details |
 
-**Test Data:** Faker-generated unique user (worker/run-suffixed email), deposit `500`
+**Test Data:** User Details: Unique Registration Payload, Deposit Amount: `500.00`
 
 **Acceptance Criteria:**
-- [ ] Every step's status is exact, not hedged
-- [ ] The transaction history entry's amount matches the deposit exactly (field-value assertion, not just array length)
-- [ ] Test data is unique per run — safe under parallel execution
+- [ ] Every onboarding and banking step returns expected status codes
+- [ ] Transaction history accurately reflects the performed deposit
+- [ ] Test data is unique per execution to prevent environment collisions
 
-**Automation Reference:** `src/tests/accounts.spec.ts` → `describe.serial('New customer onboarding to first deposit')` (`@e2e`)
+**Automation Reference:** `tests/accounts.spec.ts` (`@e2e`)
 **Status:** ✅ Automated
 
 ---
@@ -171,6 +171,6 @@
 | Symbol | Meaning |
 |---|---|
 | ✅ Automated | Test is implemented and passing |
-| ⚠️ Unresolved | Healer could not fix within its 3-attempt budget — see `test-results/unresolved.md` |
-| 🔴 Needs update | Flagged by `contract-diff-analyzer` as affected by a breaking spec change |
-| 📝 Planned | Approved in the plan but not yet generated |
+| ⚠️ Unresolved | Failure requires investigation or fix |
+| 🔴 Needs update | Spec contract change requires test update |
+| 📝 Planned | Approved in plan, pending automation |
